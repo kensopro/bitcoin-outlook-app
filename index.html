@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bitcoin Outlook</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">₿</div>
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1 class="title">Bitcoin Price Monitor</h1>
+          </div>
+        </div>
+        <div class="status">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status-text">Waiting for update...</span>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="error" id="error-banner" role="alert" hidden></div>
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Current price</p>
+              <h2 class="price" id="price">--</h2>
+            </div>
+            <div class="change" id="change">--</div>
+          </div>
+          <div class="meta">
+            <div>
+              <p class="label">Last updated</p>
+              <p class="value" id="updated">--</p>
+            </div>
+            <div>
+              <p class="label">Previous price</p>
+              <p class="value" id="previous">--</p>
+            </div>
+            <div class="actions">
+              <button id="refresh" type="button">Refresh now</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card highlights" aria-live="polite">
+          <div class="highlight" id="direction">The next update will show the latest movement.</div>
+          <div class="highlight">Data powered by CoinGecko, updated every 30 seconds.</div>
+        </section>
+      </main>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
