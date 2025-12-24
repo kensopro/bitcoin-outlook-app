@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bitcoin Playground</title>
+    <title>Bitcoin Outlook</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
   </head>
   <body>
     <div class="page">
@@ -15,104 +15,243 @@
         <div class="brand">
           <div class="logo">₿</div>
           <div>
-            <p class="eyebrow">Interactive Lab</p>
-            <h1 class="title">Bitcoin Playground</h1>
-            <p class="tagline">A bite-sized, animated crash-course on the orange coin.</p>
+            <p class="eyebrow">Bitcoin Outlook</p>
+            <h1 class="title">Pro metrics + interactive education</h1>
+            <p class="tagline">Low-latency market intel with missions that tie to live charts.</p>
           </div>
         </div>
-        <div class="status-badge">Tap, hover, play → everything reacts.</div>
+        <label class="pro-toggle" title="Gate heavy features behind Pro Mode">
+          <input type="checkbox" id="pro-mode">
+          <span class="slider"></span>
+          <span class="pro-label">Pro Mode</span>
+        </label>
       </header>
 
+      <nav class="nav">
+        <button class="nav-btn active" data-target="dashboard">Dashboard</button>
+        <button class="nav-btn" data-target="markets">Markets</button>
+        <button class="nav-btn" data-target="derivatives">Derivatives</button>
+        <button class="nav-btn" data-target="education">Education Lab</button>
+      </nav>
+
+      <section class="watch-strip" aria-label="Pinned metrics">
+        <div class="watch-item">
+          <p class="label">Spot</p>
+          <p id="strip-price" class="watch-value">—</p>
+          <span class="source">Binance WS</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">24h Δ</p>
+          <p id="strip-change" class="watch-value">—</p>
+          <span class="source">CoinGecko</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">Volatility</p>
+          <p id="strip-vol" class="watch-value">Calm</p>
+          <span class="source">Simulated</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">Last updated</p>
+          <p id="strip-updated" class="watch-value">Waiting…</p>
+          <span class="source">Audit trail</span>
+        </div>
+      </section>
+
       <main class="content">
-        <section class="hero card">
-          <div class="hero-copy">
-            <p class="hero-kicker">Learn-by-doing journey</p>
-            <h2>Understand Bitcoin without wading through walls of text.</h2>
-            <p class="muted">Chapters, timelines, hoverable charts, and a rapid-fire counter to the hard 21M supply cap. Built to be fun and snackable.</p>
-            <div class="cta-row">
-              <button id="start-tour" type="button">Start the tour</button>
-              <div class="pill">Sound on not required 🔉</div>
-            </div>
+        <section class="page-section active" id="dashboard">
+          <div class="grid three-col">
+            <article class="card metric-card" data-metric="price">
+              <header class="card-header">
+                <div>
+                  <p class="chip">Spot</p>
+                  <h3>BTC price & spread</h3>
+                  <p class="muted">Low-latency WebSocket feed with REST fallback.</p>
+                </div>
+                <button class="ghost tiny" id="copy-price" type="button">Copy</button>
+              </header>
+              <div class="metric-body">
+                <div>
+                  <p class="metric-value" id="price-display">—</p>
+                  <p class="metric-sub">Spread vs reference: <span id="spread-display">—</span></p>
+                </div>
+                <div class="meta-row">
+                  <span class="source">Source: Binance WS</span>
+                  <span class="timestamp" id="price-updated">waiting…</span>
+                </div>
+              </div>
+              <p class="explain">Why this matters: tight spreads hint at healthy liquidity.</p>
+            </article>
+
+            <article class="card metric-card" data-metric="liquidity">
+              <header class="card-header">
+                <div>
+                  <p class="chip">Order book</p>
+                  <h3>Depth & slippage estimator</h3>
+                  <p class="muted">Estimate impact for a market order using live-ish depth bands.</p>
+                </div>
+                <span class="info" title="Depth within ±1% is mocked for now; connect an exchange depth feed to power it.">?</span>
+              </header>
+              <div class="depth-controls">
+                <label for="trade-size">Trade size ($)</label>
+                <input id="trade-size" type="range" min="500" max="50000" step="500" value="5000">
+                <div class="depth-readout">
+                  <p class="metric-value" id="slippage-display">— bps</p>
+                  <p class="metric-sub">Depth @ ±1%: <span id="depth-display">—</span></p>
+                </div>
+              </div>
+              <div class="meta-row">
+                <span class="source">Source: Simulated</span>
+                <span class="timestamp" id="depth-updated">live calc</span>
+              </div>
+              <p class="explain">Why this matters: sizing into thin books spikes execution cost.</p>
+            </article>
+
+            <article class="card metric-card" data-metric="volatility">
+              <header class="card-header">
+                <div>
+                  <p class="chip">Volatility regime</p>
+                  <h3>RV vs IV proxy</h3>
+                  <p class="muted">Quick read on realized volatility bands.</p>
+                </div>
+                <span class="info" title="Rolling 7D and 30D realized volatility computed from hourly closes.">?</span>
+              </header>
+              <div class="vol-grid">
+                <div>
+                  <p class="label">7D RV</p>
+                  <p class="metric-value" id="rv7">—</p>
+                </div>
+                <div>
+                  <p class="label">30D RV</p>
+                  <p class="metric-value" id="rv30">—</p>
+                </div>
+                <div>
+                  <p class="label">Regime</p>
+                  <p class="metric-value" id="regime">Calm</p>
+                </div>
+              </div>
+              <div class="meta-row">
+                <span class="source">Source: Simulated bands</span>
+                <span class="timestamp" id="vol-updated">waiting…</span>
+              </div>
+              <p class="explain">Why this matters: regime shifts precede breakouts and alert triggers.</p>
+            </article>
           </div>
-          <div class="hero-visual" aria-hidden="true">
-            <div class="floating-orb orb-orange"></div>
-            <div class="floating-orb orb-blue"></div>
-            <div class="floating-card">
-              <p class="label">Fixed supply</p>
-              <p class="supply-number" id="supply-number">0</p>
-              <p class="muted">Counting to 21,000,000…</p>
-              <button class="ghost" id="replay-supply">Replay ✦</button>
-            </div>
+
+          <div class="grid two-col">
+            <article class="card" id="alerts-panel">
+              <header class="card-header">
+                <div>
+                  <p class="chip">Alerts</p>
+                  <h3>Price, funding, volatility</h3>
+                  <p class="muted">Fast rules with cooldown. WebSocket delivery stubbed.</p>
+                </div>
+                <button class="ghost tiny" id="add-alert" type="button">Add alert</button>
+              </header>
+              <ul id="alert-list" class="alert-list"></ul>
+              <div class="meta-row">
+                <span class="source">Engine: client mock</span>
+                <span class="timestamp" id="alert-updated">waiting…</span>
+              </div>
+            </article>
+
+            <article class="card" id="health-panel">
+              <header class="card-header">
+                <div>
+                  <p class="chip">Data source health</p>
+                  <h3>Status board</h3>
+                  <p class="muted">Surface failures and fallbacks.</p>
+                </div>
+              </header>
+              <div class="health-grid" id="health-grid"></div>
+            </article>
           </div>
         </section>
 
-        <section class="grid two-up">
-          <article class="card info-card">
-            <div class="chip">Why the cap?</div>
-            <h3>No money printer. Ever.</h3>
-            <p class="muted">Bitcoin will only ever have 21 million coins. Hover the steps to see how it gets there.</p>
-            <div class="supply-steps" id="supply-steps">
-              <button type="button" data-step="Genesis">Genesis block ▸ 50 BTC</button>
-              <button type="button" data-step="First halving">Halving ▸ 25 BTC</button>
-              <button type="button" data-step="Today">Today ▸ 6.25 BTC</button>
-              <button type="button" data-step="2140-ish">2140 ▸ block rewards ≈ 0</button>
-            </div>
-            <p class="step-explainer" id="step-explainer">Hover a step to peek at the emission story.</p>
-          </article>
-
-          <article class="card chart-card">
-            <div class="chip">Price journey (log-ish)</div>
-            <div class="chart-header">
-              <h3>Bitcoin through the years</h3>
-              <p class="muted" id="chart-caption">Hover to explore each era.</p>
-            </div>
-            <div class="chart" id="chart" role="img" aria-label="Interactive sparkline of bitcoin price history">
-              <svg id="chart-svg" viewBox="0 0 700 280" preserveAspectRatio="none"></svg>
-              <div class="chart-tooltip" id="chart-tooltip" hidden>
-                <p class="tooltip-title" id="tooltip-era">2010</p>
-                <p class="tooltip-value" id="tooltip-value">$0.00</p>
+        <section class="page-section" id="markets">
+          <article class="card">
+            <header class="card-header">
+              <div>
+                <p class="chip">Spot + technicals</p>
+                <h3>Markets view</h3>
+                <p class="muted">Mini chart, timeframe toggles, indicator toggles.</p>
+              </div>
+              <div class="toggle-group" id="indicator-toggles"></div>
+            </header>
+            <div class="chart" id="sparkline" role="img" aria-label="Bitcoin mini chart">
+              <svg id="sparkline-svg" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
+              <div class="chart-tooltip" id="sparkline-tooltip" hidden>
+                <p class="tooltip-title" id="sparkline-time">—</p>
+                <p class="tooltip-value" id="sparkline-price">—</p>
               </div>
             </div>
-            <div class="chart-footer">
-              <p class="muted">Data is illustrative—not live. The curve is tuned for hoverable storytelling, not financial advice.</p>
+            <div class="meta-row">
+              <span class="source">Source: Binance WS + CoinGecko fallback</span>
+              <span class="timestamp" id="chart-updated">waiting…</span>
+            </div>
+          </article>
+          <article class="card watchlist">
+            <header class="card-header">
+              <div>
+                <p class="chip">Watchlist</p>
+                <h3>Pro strip</h3>
+                <p class="muted">Pin your favorite metrics.</p>
+              </div>
+              <button class="ghost tiny" id="refresh-watch" type="button">Refresh</button>
+            </header>
+            <div id="watchlist-items" class="watchlist-items"></div>
+          </article>
+        </section>
+
+        <section class="page-section" id="derivatives">
+          <article class="card">
+            <header class="card-header">
+              <div>
+                <p class="chip">Funding & OI</p>
+                <h3>Derivatives pulse</h3>
+                <p class="muted">Funding, open interest, and liquidations ticker.</p>
+              </div>
+              <span class="info" title="Hook up exchange REST/WS for production.">?</span>
+            </header>
+            <table class="data-table">
+              <thead>
+                <tr><th>Exchange</th><th>Funding (8h)</th><th>Open Interest</th><th>Trend</th></tr>
+              </thead>
+              <tbody id="derivatives-body"></tbody>
+            </table>
+            <div class="meta-row">
+              <span class="source">Source: Sample</span>
+              <span class="timestamp" id="deriv-updated">waiting…</span>
             </div>
           </article>
         </section>
 
-        <section class="card chapters">
-          <div class="chapters-header">
-            <div>
-              <p class="chip">Pick a chapter</p>
-              <h3>Progress in snackable beats</h3>
-            </div>
-            <div class="chapter-controls">
-              <button class="ghost" id="previous-chapter" aria-label="Previous chapter">← Prev</button>
-              <button class="ghost" id="next-chapter" aria-label="Next chapter">Next →</button>
-            </div>
-          </div>
-          <div class="chapter-grid">
-            <div class="chapter-list" id="chapter-list"></div>
-            <div class="chapter-detail">
-              <p class="label" id="chapter-label">Chapter 1</p>
-              <h4 id="chapter-title">Why Bitcoin exists</h4>
-              <p class="chapter-blurb" id="chapter-blurb">Swipe or tap a chapter to load it here.</p>
-              <div class="lesson-pills" id="lesson-pills"></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="card timeline">
-          <div class="chip">Animated timeline</div>
-          <h3>Moments that shaped the network</h3>
-          <div class="timeline-track" id="timeline-track">
-            <div class="timeline-meter"></div>
-            <div class="timeline-events" id="timeline-events"></div>
-          </div>
-          <p class="muted" id="timeline-note">Hover or tap a marker to see the beat.</p>
+        <section class="page-section" id="education">
+          <article class="card">
+            <header class="card-header">
+              <div>
+                <p class="chip">Missions</p>
+                <h3>Interactive Education Lab</h3>
+                <p class="muted">Guided steps tied to live metrics.</p>
+              </div>
+              <button class="ghost tiny" id="start-mission" type="button">Start random mission</button>
+            </header>
+            <div class="mission-grid" id="mission-grid"></div>
+          </article>
+          <article class="card quiz">
+            <header class="card-header">
+              <div>
+                <p class="chip">Checkpoint</p>
+                <h3>Quick quiz</h3>
+                <p class="muted">Answer using the live feed context.</p>
+              </div>
+              <button class="ghost tiny" id="submit-quiz" type="button">Submit</button>
+            </header>
+            <div class="quiz-body" id="quiz-body"></div>
+            <p class="quiz-result" id="quiz-result">Pick options to test your understanding.</p>
+          </article>
         </section>
       </main>
     </div>
-
     <script src="main.js"></script>
   </body>
 </html>

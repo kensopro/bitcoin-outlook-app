@@ -1,314 +1,472 @@
-const supplyNumber = document.getElementById('supply-number');
-const replaySupplyBtn = document.getElementById('replay-supply');
-const supplySteps = document.getElementById('supply-steps');
-const stepExplainer = document.getElementById('step-explainer');
-const chartSvg = document.getElementById('chart-svg');
-const chartTooltip = document.getElementById('chart-tooltip');
-const tooltipEra = document.getElementById('tooltip-era');
-const tooltipValue = document.getElementById('tooltip-value');
-const chartCaption = document.getElementById('chart-caption');
-const chapterList = document.getElementById('chapter-list');
-const chapterLabel = document.getElementById('chapter-label');
-const chapterTitle = document.getElementById('chapter-title');
-const chapterBlurb = document.getElementById('chapter-blurb');
-const lessonPills = document.getElementById('lesson-pills');
-const prevChapterBtn = document.getElementById('previous-chapter');
-const nextChapterBtn = document.getElementById('next-chapter');
-const timelineEvents = document.getElementById('timeline-events');
-const timelineNote = document.getElementById('timeline-note');
-const startTourBtn = document.getElementById('start-tour');
+const navButtons = document.querySelectorAll('.nav-btn');
+const sections = document.querySelectorAll('.page-section');
+const proToggle = document.getElementById('pro-mode');
+const stripPrice = document.getElementById('strip-price');
+const stripChange = document.getElementById('strip-change');
+const stripVol = document.getElementById('strip-vol');
+const stripUpdated = document.getElementById('strip-updated');
+const priceDisplay = document.getElementById('price-display');
+const spreadDisplay = document.getElementById('spread-display');
+const priceUpdated = document.getElementById('price-updated');
+const copyPriceBtn = document.getElementById('copy-price');
+const tradeSize = document.getElementById('trade-size');
+const slippageDisplay = document.getElementById('slippage-display');
+const depthDisplay = document.getElementById('depth-display');
+const rv7 = document.getElementById('rv7');
+const rv30 = document.getElementById('rv30');
+const regime = document.getElementById('regime');
+const volUpdated = document.getElementById('vol-updated');
+const alertList = document.getElementById('alert-list');
+const addAlertBtn = document.getElementById('add-alert');
+const alertUpdated = document.getElementById('alert-updated');
+const healthGrid = document.getElementById('health-grid');
+const indicatorToggles = document.getElementById('indicator-toggles');
+const sparklineSvg = document.getElementById('sparkline-svg');
+const sparklineTooltip = document.getElementById('sparkline-tooltip');
+const sparklineTime = document.getElementById('sparkline-time');
+const sparklinePrice = document.getElementById('sparkline-price');
+const chartUpdated = document.getElementById('chart-updated');
+const watchlistItems = document.getElementById('watchlist-items');
+const refreshWatchBtn = document.getElementById('refresh-watch');
+const derivBody = document.getElementById('derivatives-body');
+const derivUpdated = document.getElementById('deriv-updated');
+const missionGrid = document.getElementById('mission-grid');
+const startMissionBtn = document.getElementById('start-mission');
+const quizBody = document.getElementById('quiz-body');
+const submitQuizBtn = document.getElementById('submit-quiz');
+const quizResult = document.getElementById('quiz-result');
+const stripVolBadge = document.getElementById('strip-vol');
 
-const SUPPLY_CAP = 21_000_000;
-let supplyAnimationFrame = null;
+let ws;
+let reconnectTimeout;
+let lastRestPrice = null;
+const restEndpoint =
+  'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&sparkline=false';
 
-const supplyNarrative = {
-  Genesis: '2009: 50 BTC per block. Digital scarcity begins.',
-  'First halving': '2012: Rewards drop to 25 BTC. Supply growth halves.',
-  Today: 'Today: 6.25 BTC. Inflation rate keeps shrinking.',
-  '2140-ish': 'Around 2140: block subsidy ≈ 0. Fees secure the network.',
+const missions = [
+  {
+    title: 'Funding rate basics',
+    objective: 'See when perp longs are paying shorts.',
+    steps: ['Toggle funding overlay', 'Move threshold slider to 0.05%', 'Notice frequency of spikes'],
+    liveTie: 'Compare current funding vs. your alert rule.',
+  },
+  {
+    title: 'Volatility regimes',
+    objective: 'Spot compression before expansion.',
+    steps: ['Check 7D vs 30D realized', 'Mark “Calm” vs “Expansion” zones', 'Queue a volatility breakout alert'],
+    liveTie: 'Use current RV bands to choose a regime label.',
+  },
+  {
+    title: 'Order book liquidity',
+    objective: 'Estimate slippage for your trade size.',
+    steps: ['Drag trade size slider', 'Watch bps impact update', 'Note when depth is thin'],
+    liveTie: 'Apply the calc before hitting market buy.',
+  },
+];
+
+const quiz = [
+  {
+    question: 'When 7D RV is far below 30D RV and funding is positive, what is likely happening?',
+    options: ['Compression with bullish tilt', 'High panic volatility', 'Neutral chop'],
+    answer: 0,
+  },
+  {
+    question: 'If the Binance WebSocket drops, what should the UI show?',
+    options: ['Keep stale data without warning', 'Show fallback status and last known timestamp', 'Hide the widget entirely'],
+    answer: 1,
+  },
+  {
+    question: 'Why monitor order book depth before a large market order?',
+    options: ['It sets your transaction fee', 'It reveals how much slippage you might cause', 'It changes network hashrate'],
+    answer: 1,
+  },
+];
+
+const indicatorList = ['VWAP', 'MA', 'RSI', 'Volume'];
+
+function formatUSD(value, digits = 0) {
+  return `$${Number(value).toLocaleString('en-US', {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  })}`;
+}
+
+function formatCompact(value) {
+  return `$${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)}`;
+}
+
+function nowLabel() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function switchSection(targetId) {
+  sections.forEach((section) => section.classList.toggle('active', section.id === targetId));
+  navButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.target === targetId));
+}
+
+navButtons.forEach((btn) => {
+  btn.addEventListener('click', () => switchSection(btn.dataset.target));
+});
+
+proToggle.addEventListener('change', () => {
+  document.body.classList.toggle('pro-enabled', proToggle.checked);
+});
+
+function updateHealth(status, lastUpdated) {
+  const items = [
+    { name: 'Binance WebSocket', status: status.ws ? 'pass' : 'fail', updated: lastUpdated.ws },
+    { name: 'CoinGecko REST', status: status.rest ? 'pass' : 'fail', updated: lastUpdated.rest },
+    { name: 'Education missions', status: 'pass', updated: nowLabel() },
+  ];
+
+  healthGrid.innerHTML = '';
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    card.className = 'health-card';
+    const statusClass = item.status === 'pass' ? 'status-pass' : 'status-fail';
+    card.innerHTML = `
+      <p class="label">${item.name}</p>
+      <p class="metric-value ${statusClass}">${item.status === 'pass' ? 'Healthy' : 'Issue'}</p>
+      <p class="muted">Last updated ${item.updated || '—'}</p>
+    `;
+    healthGrid.appendChild(card);
+  });
+}
+
+const healthState = {
+  ws: false,
+  rest: false,
+};
+const healthUpdated = {
+  ws: null,
+  rest: null,
 };
 
-const priceStory = [
-  { era: '2009', value: 0.0008, note: 'Pizza was still a dream.' },
-  { era: '2011', value: 1, note: 'Parity with the dollar.' },
-  { era: '2013', value: 200, note: 'First big rally and learning loop.' },
-  { era: '2017', value: 19000, note: 'The original mania run.' },
-  { era: '2020', value: 10000, note: 'Halving meets macro chaos.' },
-  { era: '2021', value: 69000, note: 'ATH driven by institutions & memes.' },
-  { era: '2022', value: 16000, note: 'Reset. Builders keep building.' },
-  { era: '2024', value: 43000, note: 'ETF era. Block subsidy = 3.125 BTC.' },
-];
+function connectWebSocket() {
+  clearTimeout(reconnectTimeout);
+  ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@miniTicker');
 
-const chapters = [
-  {
-    label: 'Chapter 1',
-    title: 'Why Bitcoin exists',
-    blurb: 'Fiat currencies can be inflated at will. Bitcoin hard-codes scarcity and verification.',
-    lessons: ['Digital scarcity 101', 'Open-source money', 'Trust minimization'],
-  },
-  {
-    label: 'Chapter 2',
-    title: 'How blocks tick',
-    blurb: 'Miners assemble transactions, solve puzzles, and anchor new blocks to the longest chain.',
-    lessons: ['Proof-of-Work basics', 'Difficulty adjustments', 'Block headers & hashes'],
-  },
-  {
-    label: 'Chapter 3',
-    title: 'Halvings & supply',
-    blurb: 'Every ~4 years, new issuance halves. The countdown to 21 million is baked in.',
-    lessons: ['Reward schedule', 'Security incentives', '2140 endgame'],
-  },
-  {
-    label: 'Chapter 4',
-    title: 'Owning bitcoin',
-    blurb: 'Not your keys, not your coins. Wallets sign transactions without revealing secrets.',
-    lessons: ['Keys & seeds', 'On-chain vs. Lightning', 'Self-custody hygiene'],
-  },
-  {
-    label: 'Chapter 5',
-    title: 'Cultural vibes',
-    blurb: 'From cypherpunks to ETFs, culture drives adoption and the memes keep shipping.',
-    lessons: ['Communities & memes', 'Narratives over time', 'Builders vs. speculators'],
-  },
-];
-
-const timeline = [
-  { year: '2008', title: 'Whitepaper drop', detail: 'Satoshi publishes the blueprint for peer-to-peer cash.' },
-  { year: '2009', title: 'Genesis block', detail: 'Block 0: “Chancellor on brink of second bailout for banks.”' },
-  { year: '2012', title: 'First halving', detail: 'Reward halves to 25 BTC. Scarcity goes on autopilot.' },
-  { year: '2017', title: 'Scaling debates', detail: 'SegWit activates, paving the way for Lightning.' },
-  { year: '2021', title: 'Taproot upgrade', detail: 'Better privacy and smart contract flexibility.' },
-  { year: '2024', title: 'ETF era', detail: 'Traditional finance meets censorship-resistant rails.' },
-];
-
-function animateSupplyCounter() {
-  cancelAnimationFrame(supplyAnimationFrame);
-  const start = performance.now();
-  const duration = 1200;
-
-  const update = (now) => {
-    const progress = Math.min(1, (now - start) / duration);
-    const value = Math.floor(progress * SUPPLY_CAP);
-    supplyNumber.textContent = value.toLocaleString('en-US');
-
-    if (progress < 1) {
-      supplyAnimationFrame = requestAnimationFrame(update);
-    } else {
-      supplyNumber.textContent = SUPPLY_CAP.toLocaleString('en-US');
-    }
+  ws.onopen = () => {
+    healthState.ws = true;
+    healthUpdated.ws = nowLabel();
+    updateHealth(healthState, healthUpdated);
   };
 
-  supplyAnimationFrame = requestAnimationFrame(update);
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const price = Number(data.c);
+    lastRestPrice = price;
+    renderLivePrice(price);
+    chartUpdated.textContent = `Live • ${nowLabel()}`;
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+
+  ws.onclose = () => {
+    healthState.ws = false;
+    updateHealth(healthState, healthUpdated);
+    reconnectTimeout = setTimeout(connectWebSocket, 1500);
+  };
 }
 
-function wireSupplySteps() {
-  supplySteps.querySelectorAll('button').forEach((btn) => {
-    const updateText = () => {
-      const label = btn.dataset.step;
-      stepExplainer.textContent = supplyNarrative[label] || 'Scarcity is enforced every block.';
-      btn.classList.add('active');
-    };
+async function fetchRestMetrics() {
+  try {
+    const res = await fetch(restEndpoint);
+    if (!res.ok) throw new Error('REST failed');
+    const json = await res.json();
+    const market = json.market_data;
+    healthState.rest = true;
+    healthUpdated.rest = nowLabel();
+    updateHealth(healthState, healthUpdated);
 
-    const reset = () => btn.classList.remove('active');
+    const price = market.current_price.usd;
+    if (!lastRestPrice) lastRestPrice = price;
+    stripChange.textContent = `${market.price_change_percentage_24h.toFixed(2)}%`;
+    stripChange.classList.toggle('positive', market.price_change_percentage_24h >= 0);
+    stripChange.classList.toggle('negative', market.price_change_percentage_24h < 0);
 
-    btn.addEventListener('mouseenter', updateText);
-    btn.addEventListener('focus', updateText);
-    btn.addEventListener('mouseleave', reset);
-    btn.addEventListener('blur', reset);
-  });
-}
+    spreadDisplay.textContent = `${(price - lastRestPrice).toFixed(2)} vs. ref`;
+    updateDepthEstimate();
 
-function renderChart() {
-  if (!chartSvg) return;
-  const width = 700;
-  const height = 280;
-  chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  chartSvg.innerHTML = '';
-
-  const values = priceStory.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const padding = 36;
-  const xStep = (width - padding * 2) / (priceStory.length - 1);
-
-  const points = priceStory.map((point, index) => {
-    const x = padding + index * xStep;
-    const normalized = (point.value - min) / (max - min);
-    const y = height - padding - normalized * (height - padding * 2);
-    return { ...point, x, y };
-  });
-
-  const pathD = points
-    .map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
-    .join(' ');
-
-  const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-  gradient.id = 'line-gradient';
-  gradient.setAttribute('x1', '0%');
-  gradient.setAttribute('x2', '100%');
-  gradient.setAttribute('y1', '0%');
-  gradient.setAttribute('y2', '0%');
-
-  const stopA = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stopA.setAttribute('offset', '0%');
-  stopA.setAttribute('stop-color', '#fbbf24');
-  gradient.appendChild(stopA);
-
-  const stopB = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stopB.setAttribute('offset', '100%');
-  stopB.setAttribute('stop-color', '#22d3ee');
-  gradient.appendChild(stopB);
-
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.appendChild(gradient);
-  chartSvg.appendChild(defs);
-
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', pathD);
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'url(#line-gradient)');
-  path.setAttribute('stroke-width', '4');
-  path.setAttribute('stroke-linecap', 'round');
-  chartSvg.appendChild(path);
-
-  points.forEach((point) => {
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    node.setAttribute('cx', point.x);
-    node.setAttribute('cy', point.y);
-    node.setAttribute('r', '8');
-    node.setAttribute('fill', '#0f172a');
-    node.setAttribute('stroke', 'url(#line-gradient)');
-    node.setAttribute('stroke-width', '3');
-    node.classList.add('chart-dot');
-
-    node.addEventListener('mouseenter', () => showTooltip(point));
-    node.addEventListener('focus', () => showTooltip(point));
-
-    chartSvg.appendChild(node);
-  });
-
-  chartSvg.addEventListener('mouseleave', hideTooltip);
-}
-
-function showTooltip(point) {
-  chartTooltip.hidden = false;
-  tooltipEra.textContent = point.era;
-  tooltipValue.textContent = `$${point.value.toLocaleString('en-US')}`;
-  chartCaption.textContent = point.note;
-
-  const left = (point.x / 700) * 100;
-  const top = (point.y / 280) * 100;
-  chartTooltip.style.left = `${left}%`;
-  chartTooltip.style.top = `${top}%`;
-}
-
-function hideTooltip() {
-  chartTooltip.hidden = true;
-  chartCaption.textContent = 'Hover to explore each era.';
-}
-
-function renderChapters() {
-  chapters.forEach((chapter, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = chapter.title;
-    button.dataset.index = index;
-    button.className = 'chapter-item';
-    button.addEventListener('click', () => loadChapter(index));
-    chapterList.appendChild(button);
-  });
-
-  loadChapter(0);
-}
-
-function loadChapter(index) {
-  const chapter = chapters[index];
-  if (!chapter) return;
-
-  chapterLabel.textContent = chapter.label;
-  chapterTitle.textContent = chapter.title;
-  chapterBlurb.textContent = chapter.blurb;
-
-  lessonPills.innerHTML = '';
-  chapter.lessons.forEach((lesson) => {
-    const pill = document.createElement('span');
-    pill.className = 'pill';
-    pill.textContent = lesson;
-    lessonPills.appendChild(pill);
-  });
-
-  chapterList.querySelectorAll('button').forEach((btn) => {
-    btn.classList.toggle('active', Number(btn.dataset.index) === index);
-  });
-
-  lessonPills.scrollLeft = 0;
-}
-
-function renderTimeline() {
-  timeline.forEach((event, index) => {
-    const marker = document.createElement('button');
-    marker.type = 'button';
-    marker.className = 'timeline-marker';
-    marker.dataset.index = index;
-    marker.innerHTML = `<span>${event.year}</span>`;
-
-    const label = document.createElement('div');
-    label.className = 'timeline-label';
-    label.innerHTML = `<strong>${event.title}</strong><p>${event.detail}</p>`;
-
-    const container = document.createElement('div');
-    container.className = 'timeline-node';
-    container.appendChild(marker);
-    container.appendChild(label);
-
-    marker.addEventListener('mouseenter', () => highlightEvent(index));
-    marker.addEventListener('focus', () => highlightEvent(index));
-    marker.addEventListener('click', () => highlightEvent(index));
-
-    timelineEvents.appendChild(container);
-  });
-
-  highlightEvent(0);
-}
-
-function highlightEvent(index) {
-  timelineEvents.querySelectorAll('.timeline-marker').forEach((marker) => {
-    marker.classList.toggle('active', Number(marker.dataset.index) === index);
-  });
-
-  timelineEvents.querySelectorAll('.timeline-label').forEach((label, labelIndex) => {
-    label.classList.toggle('visible', labelIndex === index);
-  });
-
-  const active = timeline[index];
-  if (active) {
-    timelineNote.textContent = `${active.year}: ${active.detail}`;
+    stripUpdated.textContent = `REST • ${nowLabel()}`;
+    renderLivePrice(price);
+    chartUpdated.textContent = `REST • ${nowLabel()}`;
+  } catch (error) {
+    healthState.rest = false;
+    updateHealth(healthState, healthUpdated);
+    stripUpdated.textContent = 'REST fallback failed';
+    console.error(error);
   }
 }
 
-function cycleChapter(step) {
-  const activeIndex = Array.from(chapterList.children).findIndex((btn) => btn.classList.contains('active'));
-  const nextIndex = (activeIndex + step + chapters.length) % chapters.length;
-  loadChapter(nextIndex);
+function renderLivePrice(price) {
+  if (!priceDisplay) return;
+  priceDisplay.textContent = formatUSD(price, 2);
+  stripPrice.textContent = formatUSD(price, 2);
+  spreadDisplay.textContent = 'tight (<$2)';
+  priceUpdated.textContent = `Live • ${nowLabel()}`;
+  stripUpdated.textContent = `WS • ${nowLabel()}`;
+  addPointToSparkline(price);
 }
 
-function attachChapterControls() {
-  prevChapterBtn.addEventListener('click', () => cycleChapter(-1));
-  nextChapterBtn.addEventListener('click', () => cycleChapter(1));
+function updateDepthEstimate() {
+  const tradeValue = Number(tradeSize.value);
+  const depthUsd = Math.max(8000, tradeValue * 5);
+  const slippage = Math.min(120, (tradeValue / depthUsd) * 10000).toFixed(1);
+  depthDisplay.textContent = formatCompact(depthUsd);
+  slippageDisplay.textContent = `${slippage} bps`;
 }
 
-function animateTourCTA() {
-  startTourBtn.addEventListener('click', () => {
-    document.querySelector('.chapters').scrollIntoView({ behavior: 'smooth' });
+tradeSize.addEventListener('input', updateDepthEstimate);
+
+function seedVolatility() {
+  const val7 = (Math.random() * 0.04 + 0.01) * 100;
+  const val30 = val7 + (Math.random() * 0.06 - 0.03) * 100;
+  rv7.textContent = `${val7.toFixed(2)}%`;
+  rv30.textContent = `${val30.toFixed(2)}%`;
+  const diff = val7 - val30;
+  const regimeLabel = diff > 2 ? 'Expansion' : diff < -2 ? 'Compression' : 'Calm';
+  regime.textContent = regimeLabel;
+  stripVol.textContent = regimeLabel;
+  volUpdated.textContent = nowLabel();
+}
+
+function addAlert() {
+  const templates = [
+    'Price crosses $70k (cooldown 10m)',
+    'Funding > 0.05% (dedup 1h)',
+    '7D RV > 30D RV (vol breakout)'
+  ];
+  const text = templates[Math.floor(Math.random() * templates.length)];
+  const li = document.createElement('li');
+  li.className = 'alert-item';
+  li.innerHTML = `
+    <span class="pill">Active</span>
+    <strong>${text}</strong>
+    <span class="muted">Last evaluated ${nowLabel()}</span>
+  `;
+  alertList.prepend(li);
+  alertUpdated.textContent = nowLabel();
+}
+
+addAlertBtn.addEventListener('click', addAlert);
+
+function buildIndicators() {
+  indicatorList.forEach((ind) => {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = ind === 'VWAP';
+    input.addEventListener('change', () => {
+      chartUpdated.textContent = `${ind} ${input.checked ? 'on' : 'off'} • ${nowLabel()}`;
+    });
+    label.appendChild(input);
+    label.append(ind);
+    indicatorToggles.appendChild(label);
   });
 }
 
-animateSupplyCounter();
-wireSupplySteps();
-renderChart();
-renderChapters();
-renderTimeline();
-attachChapterControls();
-animateTourCTA();
+const sparkPoints = [];
 
-replaySupplyBtn.addEventListener('click', animateSupplyCounter);
+function addPointToSparkline(price) {
+  const now = Date.now();
+  sparkPoints.push({ time: now, price });
+  const maxPoints = 80;
+  if (sparkPoints.length > maxPoints) sparkPoints.shift();
+  renderSparkline();
+}
+
+function renderSparkline() {
+  sparklineSvg.innerHTML = '';
+  if (sparkPoints.length < 2) return;
+  const width = 800;
+  const height = 240;
+  const padding = 20;
+  const minPrice = Math.min(...sparkPoints.map((p) => p.price));
+  const maxPrice = Math.max(...sparkPoints.map((p) => p.price));
+  const range = maxPrice - minPrice || 1;
+
+  const points = sparkPoints.map((pt, idx) => {
+    const x = padding + (idx / (sparkPoints.length - 1)) * (width - padding * 2);
+    const y = height - padding - ((pt.price - minPrice) / range) * (height - padding * 2);
+    return { ...pt, x, y };
+  });
+
+  const pathD = points.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x} ${pt.y}`).join(' ');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', pathD);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'url(#spark-grad)');
+  path.setAttribute('stroke-width', '3');
+  path.setAttribute('stroke-linecap', 'round');
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+  grad.id = 'spark-grad';
+  grad.setAttribute('x1', '0%');
+  grad.setAttribute('x2', '100%');
+  grad.setAttribute('y1', '0%');
+  grad.setAttribute('y2', '0%');
+  const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop1.setAttribute('offset', '0%');
+  stop1.setAttribute('stop-color', '#fbbf24');
+  const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop2.setAttribute('offset', '100%');
+  stop2.setAttribute('stop-color', '#22d3ee');
+  grad.append(stop1, stop2);
+  defs.appendChild(grad);
+  sparklineSvg.appendChild(defs);
+  sparklineSvg.appendChild(path);
+
+  points.forEach((pt) => {
+    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    node.setAttribute('cx', pt.x);
+    node.setAttribute('cy', pt.y);
+    node.setAttribute('r', 6);
+    node.setAttribute('fill', '#0f172a');
+    node.setAttribute('stroke', '#fbbf24');
+    node.setAttribute('stroke-width', 2);
+    node.addEventListener('mouseenter', () => showSparkTooltip(pt));
+    node.addEventListener('focus', () => showSparkTooltip(pt));
+    sparklineSvg.appendChild(node);
+  });
+
+  sparklineSvg.addEventListener('mouseleave', () => {
+    sparklineTooltip.hidden = true;
+  });
+}
+
+function showSparkTooltip(pt) {
+  sparklineTooltip.hidden = false;
+  sparklineTime.textContent = new Date(pt.time).toLocaleTimeString();
+  sparklinePrice.textContent = formatUSD(pt.price, 2);
+  sparklineTooltip.style.left = `${(pt.x / 800) * 100}%`;
+  sparklineTooltip.style.top = `${(pt.y / 240) * 100}%`;
+}
+
+function seedWatchlist() {
+  const items = [
+    { label: 'BTCUSD', value: stripPrice.textContent || '—', tag: 'Spot' },
+    { label: 'Funding', value: '0.012%', tag: '8h' },
+    { label: 'OI', value: '$12.4B', tag: 'Agg' },
+    { label: 'Vol regime', value: stripVolBadge.textContent, tag: 'RV' },
+  ];
+  watchlistItems.innerHTML = '';
+  items.forEach((item) => {
+    const card = document.createElement('div');
+    card.className = 'watch-card';
+    card.innerHTML = `
+      <div class="meta-row"><span class="badge">${item.tag}</span><span class="muted">Pin</span></div>
+      <strong>${item.label}</strong>
+      <span class="muted">${item.value}</span>
+    `;
+    watchlistItems.appendChild(card);
+  });
+}
+
+refreshWatchBtn.addEventListener('click', seedWatchlist);
+
+function seedDerivatives() {
+  const rows = [
+    { ex: 'Binance', funding: '0.018%', oi: '$5.2B', trend: 'Rising' },
+    { ex: 'Bybit', funding: '0.011%', oi: '$3.1B', trend: 'Flat' },
+    { ex: 'OKX', funding: '-0.004%', oi: '$2.7B', trend: 'Cooling' },
+  ];
+  derivBody.innerHTML = '';
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.ex}</td><td>${row.funding}</td><td>${row.oi}</td><td>${row.trend}</td>`;
+    derivBody.appendChild(tr);
+  });
+  derivUpdated.textContent = nowLabel();
+}
+
+function renderMissions() {
+  missionGrid.innerHTML = '';
+  missions.forEach((mission) => {
+    const card = document.createElement('div');
+    card.className = 'mission-card';
+    card.innerHTML = `
+      <p class="badge">Mission</p>
+      <strong>${mission.title}</strong>
+      <p class="muted">Objective: ${mission.objective}</p>
+      <ul>${mission.steps.map((s) => `<li>${s}</li>`).join('')}</ul>
+      <p class="muted">Apply: ${mission.liveTie}</p>
+    `;
+    missionGrid.appendChild(card);
+  });
+}
+
+startMissionBtn.addEventListener('click', () => {
+  const rand = missions[Math.floor(Math.random() * missions.length)];
+  quizResult.textContent = `Loaded: ${rand.title}. Apply it to the live price.`;
+});
+
+function renderQuiz() {
+  quizBody.innerHTML = '';
+  quiz.forEach((q, idx) => {
+    const container = document.createElement('div');
+    container.className = 'quiz-question';
+    const title = document.createElement('p');
+    title.textContent = q.question;
+    container.appendChild(title);
+
+    q.options.forEach((opt, optIndex) => {
+      const label = document.createElement('label');
+      label.style.display = 'block';
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = `quiz-${idx}`;
+      input.value = optIndex;
+      label.appendChild(input);
+      label.append(` ${opt}`);
+      container.appendChild(label);
+    });
+
+    quizBody.appendChild(container);
+  });
+}
+
+submitQuizBtn.addEventListener('click', () => {
+  let correct = 0;
+  quiz.forEach((q, idx) => {
+    const chosen = quizBody.querySelector(`input[name="quiz-${idx}"]:checked`);
+    if (chosen && Number(chosen.value) === q.answer) correct += 1;
+  });
+  quizResult.textContent = `You nailed ${correct}/${quiz.length}. Keep iterating.`;
+});
+
+copyPriceBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(priceDisplay.textContent);
+  copyPriceBtn.textContent = 'Copied';
+  setTimeout(() => (copyPriceBtn.textContent = 'Copy'), 900);
+});
+
+function initWatchStrip() {
+  stripVol.textContent = 'Calm';
+  stripPrice.textContent = '—';
+  stripUpdated.textContent = 'Waiting…';
+}
+
+function bootstrap() {
+  initWatchStrip();
+  connectWebSocket();
+  fetchRestMetrics();
+  setInterval(fetchRestMetrics, 60_000);
+  seedVolatility();
+  setInterval(seedVolatility, 45_000);
+  updateDepthEstimate();
+  addAlert();
+  buildIndicators();
+  seedWatchlist();
+  seedDerivatives();
+  renderMissions();
+  renderQuiz();
+}
+
+bootstrap();
