@@ -15,46 +15,101 @@
         <div class="brand">
           <div class="logo">₿</div>
           <div>
-            <p class="eyebrow">Dashboard</p>
-            <h1 class="title">Bitcoin Price Monitor</h1>
+            <p class="eyebrow">Live dashboard</p>
+            <h1 class="title">Bitcoin Outlook</h1>
           </div>
         </div>
-        <div class="status">
+        <div class="status" aria-live="polite">
           <span class="dot" aria-hidden="true"></span>
-          <span id="status-text">Waiting for update...</span>
+          <span id="status-text">Preparing first fetch…</span>
+          <span class="countdown" id="countdown">--s to next refresh</span>
         </div>
       </header>
 
-      <div id="error-banner" class="error-banner" role="alert" aria-live="assertive" hidden>
-      </div>
+      <main class="content" aria-live="polite">
+        <div class="error" id="error-banner" role="alert" hidden></div>
 
-      <main class="content">
-        <section class="card">
-          <div class="card-header">
-            <div>
-              <p class="eyebrow">Current price</p>
+        <section class="card hero">
+          <div>
+            <p class="eyebrow">Spot price (USD)</p>
+            <div class="hero-price-row">
               <h2 class="price" id="price">--</h2>
+              <div class="change" id="change">--</div>
             </div>
-            <div class="change" id="change">--</div>
+            <p class="muted" id="last-updated">Last updated: --</p>
           </div>
-          <div class="meta">
+          <div class="hero-meta">
             <div>
-              <p class="label">Last updated</p>
-              <p class="value" id="updated">--</p>
+              <p class="label">1h change</p>
+              <p class="value" id="change-1h">--</p>
             </div>
             <div>
-              <p class="label">Previous price</p>
-              <p class="value" id="previous">--</p>
+              <p class="label">24h change</p>
+              <p class="value" id="change-24h">--</p>
             </div>
-            <div class="actions">
-              <button id="refresh" type="button">Refresh now</button>
+            <div>
+              <p class="label">7d change</p>
+              <p class="value" id="change-7d">--</p>
             </div>
           </div>
         </section>
 
-        <section class="card highlights" aria-live="polite">
-          <div class="highlight" id="direction">The next update will show the latest movement.</div>
-          <div class="highlight">Data powered by CoinGecko, updated every 30 seconds.</div>
+        <section class="card grid">
+          <div>
+            <p class="label">Market cap</p>
+            <p class="value" id="market-cap">--</p>
+          </div>
+          <div>
+            <p class="label">Fully diluted valuation</p>
+            <p class="value" id="fdv">--</p>
+          </div>
+          <div>
+            <p class="label">24h volume</p>
+            <p class="value" id="volume">--</p>
+          </div>
+          <div>
+            <p class="label">24h high</p>
+            <p class="value" id="high-24h">--</p>
+          </div>
+          <div>
+            <p class="label">24h low</p>
+            <p class="value" id="low-24h">--</p>
+          </div>
+          <div>
+            <p class="label">Previous price</p>
+            <p class="value" id="previous">--</p>
+          </div>
+        </section>
+
+        <section class="card grid">
+          <div>
+            <p class="label">Circulating supply</p>
+            <p class="value" id="circulating">--</p>
+          </div>
+          <div>
+            <p class="label">Max supply</p>
+            <p class="value" id="max-supply">--</p>
+          </div>
+          <div>
+            <p class="label">ATH (USD)</p>
+            <p class="value" id="ath">--</p>
+            <p class="muted" id="ath-date">--</p>
+          </div>
+          <div>
+            <p class="label">ATL (USD)</p>
+            <p class="value" id="atl">--</p>
+            <p class="muted" id="atl-date">--</p>
+          </div>
+        </section>
+
+        <section class="card controls">
+          <div>
+            <p class="label">Movement since last refresh</p>
+            <p class="value" id="direction">Waiting for first comparison.</p>
+          </div>
+          <div class="actions">
+            <button id="refresh" type="button" aria-label="Refresh price data">Refresh now</button>
+          </div>
         </section>
       </main>
     </div>
