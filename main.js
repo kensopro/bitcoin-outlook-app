@@ -17,6 +17,15 @@ const nextChapterBtn = document.getElementById('next-chapter');
 const timelineEvents = document.getElementById('timeline-events');
 const timelineNote = document.getElementById('timeline-note');
 const startTourBtn = document.getElementById('start-tour');
+const priceValue = document.getElementById('price-value');
+const priceSub = document.getElementById('price-sub');
+const changeValue = document.getElementById('change-value');
+const changeSub = document.getElementById('change-sub');
+const marketCapValue = document.getElementById('market-cap-value');
+const marketCapSub = document.getElementById('market-cap-sub');
+const volumeValue = document.getElementById('volume-value');
+const volumeSub = document.getElementById('volume-sub');
+const lastUpdated = document.getElementById('last-updated');
 
 const SUPPLY_CAP = 21_000_000;
 let supplyAnimationFrame = null;
@@ -80,6 +89,67 @@ const timeline = [
   { year: '2021', title: 'Taproot upgrade', detail: 'Better privacy and smart contract flexibility.' },
   { year: '2024', title: 'ETF era', detail: 'Traditional finance meets censorship-resistant rails.' },
 ];
+
+function formatCurrency(value) {
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+}
+
+function formatCompact(value) {
+  return `$${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
+}
+
+function updateStatus(text) {
+  if (lastUpdated) {
+    lastUpdated.textContent = text;
+  }
+}
+
+async function fetchMetrics() {
+  updateStatus('Fetching live market data…');
+  const response = await fetch(
+    'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&sparkline=false'
+  );
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+}
+
+function setChangeTone(value) {
+  changeValue.classList.toggle('positive', value >= 0);
+  changeValue.classList.toggle('negative', value < 0);
+  changeSub.textContent = value >= 0 ? 'Green day for the orange coin.' : 'Pullback on the boards.';
+}
+
+function updateMetricCards(data) {
+  const marketData = data.market_data;
+  priceValue.textContent = formatCurrency(marketData.current_price.usd);
+  priceSub.textContent = `Cap change ${marketData.market_cap_change_percentage_24h.toFixed(2)}% over 24h`;
+
+  const change = marketData.price_change_percentage_24h;
+  changeValue.textContent = `${change.toFixed(2)}%`;
+  setChangeTone(change);
+
+  marketCapValue.textContent = formatCompact(marketData.market_cap.usd);
+  marketCapSub.textContent = `${marketData.circulating_supply.toLocaleString('en-US')} BTC circulating`;
+
+  volumeValue.textContent = formatCompact(marketData.total_volume.usd);
+  volumeSub.textContent = '24h exchange and on-chain turnover';
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  updateStatus(`Live • updated ${timestamp}`);
+}
+
+async function hydrateMetrics() {
+  try {
+    const data = await fetchMetrics();
+    updateMetricCards(data);
+  } catch (error) {
+    updateStatus('Could not load live data. Retry in a moment.');
+    priceSub.textContent = 'Check your connection and refresh.';
+    console.error('Error fetching metrics', error);
+  }
+}
 
 function animateSupplyCounter() {
   cancelAnimationFrame(supplyAnimationFrame);
@@ -303,6 +373,19 @@ function animateTourCTA() {
   });
 }
 
+function attachMetricCopy() {
+  document.querySelectorAll('.stat-card').forEach((card) => {
+    const targetId = card.dataset.copyTarget;
+    const target = document.getElementById(targetId);
+    card.addEventListener('click', () => {
+      if (!target) return;
+      navigator.clipboard.writeText(target.textContent.trim());
+      card.classList.add('copied');
+      setTimeout(() => card.classList.remove('copied'), 800);
+    });
+  });
+}
+
 animateSupplyCounter();
 wireSupplySteps();
 renderChart();
@@ -310,5 +393,8 @@ renderChapters();
 renderTimeline();
 attachChapterControls();
 animateTourCTA();
+attachMetricCopy();
+hydrateMetrics();
+setInterval(hydrateMetrics, 60_000);
 
 replaySupplyBtn.addEventListener('click', animateSupplyCounter);
