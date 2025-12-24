@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bitcoin Playground</title>
+    <title>Bitcoin Outlook</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   </head>
   <body>
@@ -15,104 +16,174 @@
         <div class="brand">
           <div class="logo">₿</div>
           <div>
-            <p class="eyebrow">Interactive Lab</p>
-            <h1 class="title">Bitcoin Playground</h1>
-            <p class="tagline">A bite-sized, animated crash-course on the orange coin.</p>
+            <p class="eyebrow">Live dashboard</p>
+            <h1 class="title">Bitcoin Outlook</h1>
+            <p class="muted">Track the latest market moves and jump into an interactive learning lab.</p>
           </div>
         </div>
-        <div class="status-badge">Tap, hover, play → everything reacts.</div>
+        <div class="status" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status-text">Preparing first fetch…</span>
+          <span class="countdown" id="countdown">--s to next refresh</span>
+        <div class="header-actions">
+          <button class="ghost" id="jump-to-learn" type="button">Jump to learning</button>
+          <div class="status" aria-live="polite">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="status-text">Preparing first fetch…</span>
+            <span class="countdown" id="countdown">--s to next refresh</span>
+          </div>
+        </div>
       </header>
 
-      <main class="content">
-        <section class="hero card">
-          <div class="hero-copy">
-            <p class="hero-kicker">Learn-by-doing journey</p>
-            <h2>Understand Bitcoin without wading through walls of text.</h2>
-            <p class="muted">Chapters, timelines, hoverable charts, and a rapid-fire counter to the hard 21M supply cap. Built to be fun and snackable.</p>
-            <div class="cta-row">
-              <button id="start-tour" type="button">Start the tour</button>
-              <div class="pill">Sound on not required 🔉</div>
+      <main class="content" aria-live="polite">
+        <div class="error" id="error-banner" role="alert" hidden></div>
+
+        <section class="card hero">
+          <div>
+            <p class="eyebrow">Spot price (USD)</p>
+            <div class="hero-price-row">
+              <h2 class="price" id="price">--</h2>
+              <div class="change" id="change">--</div>
             </div>
+            <p class="muted" id="last-updated">Last updated: --</p>
           </div>
-          <div class="hero-visual" aria-hidden="true">
-            <div class="floating-orb orb-orange"></div>
-            <div class="floating-orb orb-blue"></div>
-            <div class="floating-card">
-              <p class="label">Fixed supply</p>
-              <p class="supply-number" id="supply-number">0</p>
-              <p class="muted">Counting to 21,000,000…</p>
-              <button class="ghost" id="replay-supply">Replay ✦</button>
+          <div class="hero-meta">
+            <div>
+              <p class="label">1h change</p>
+              <p class="value" id="change-1h">--</p>
             </div>
+            <div>
+              <p class="label">24h change</p>
+              <p class="value" id="change-24h">--</p>
+            </div>
+            <div>
+@@ -89,31 +93,128 @@
+          <div>
+            <p class="label">Max supply</p>
+            <p class="value" id="max-supply">--</p>
+          </div>
+          <div>
+            <p class="label">ATH (USD)</p>
+            <p class="value" id="ath">--</p>
+            <p class="muted" id="ath-date">--</p>
+          </div>
+          <div>
+            <p class="label">ATL (USD)</p>
+            <p class="value" id="atl">--</p>
+            <p class="muted" id="atl-date">--</p>
           </div>
         </section>
 
-        <section class="grid two-up">
-          <article class="card info-card">
-            <div class="chip">Why the cap?</div>
-            <h3>No money printer. Ever.</h3>
-            <p class="muted">Bitcoin will only ever have 21 million coins. Hover the steps to see how it gets there.</p>
-            <div class="supply-steps" id="supply-steps">
-              <button type="button" data-step="Genesis">Genesis block ▸ 50 BTC</button>
-              <button type="button" data-step="First halving">Halving ▸ 25 BTC</button>
-              <button type="button" data-step="Today">Today ▸ 6.25 BTC</button>
-              <button type="button" data-step="2140-ish">2140 ▸ block rewards ≈ 0</button>
-            </div>
-            <p class="step-explainer" id="step-explainer">Hover a step to peek at the emission story.</p>
-          </article>
+        <section class="card controls">
+          <div>
+            <p class="label">Movement since last refresh</p>
+            <p class="value" id="direction">Waiting for first comparison.</p>
+          </div>
+          <div class="actions">
+            <button id="refresh" type="button" aria-label="Refresh price data">Refresh now</button>
+          </div>
+        </section>
 
-          <article class="card chart-card">
-            <div class="chip">Price journey (log-ish)</div>
-            <div class="chart-header">
-              <h3>Bitcoin through the years</h3>
-              <p class="muted" id="chart-caption">Hover to explore each era.</p>
+        <section id="learn" class="learn-section">
+          <div class="learn-heading">
+            <div>
+              <p class="eyebrow">Interactive Lab</p>
+              <h2 class="title">Learn Bitcoin by playing</h2>
+              <p class="muted">Hover, tap, and explore: scarcity, halvings, and cultural beats without wading through walls of text.</p>
             </div>
-            <div class="chart" id="chart" role="img" aria-label="Interactive sparkline of bitcoin price history">
-              <svg id="chart-svg" viewBox="0 0 700 280" preserveAspectRatio="none"></svg>
-              <div class="chart-tooltip" id="chart-tooltip" hidden>
-                <p class="tooltip-title" id="tooltip-era">2010</p>
-                <p class="tooltip-value" id="tooltip-value">$0.00</p>
+            <button id="start-tour" type="button">Start the tour</button>
+          </div>
+
+          <section class="card learn-hero">
+            <div class="hero-copy">
+              <p class="hero-kicker">Learn-by-doing journey</p>
+              <h3>Understand Bitcoin without wading through walls of text.</h3>
+              <p class="muted">Chapters, timelines, hoverable charts, and a rapid-fire counter to the hard 21M supply cap.</p>
+              <div class="cta-row">
+                <button id="replay-supply" type="button" class="ghost">Replay the 21M sprint</button>
+                <div class="pill">Sound on not required 🔉</div>
               </div>
             </div>
-            <div class="chart-footer">
-              <p class="muted">Data is illustrative—not live. The curve is tuned for hoverable storytelling, not financial advice.</p>
+            <div class="hero-visual" aria-hidden="true">
+              <div class="floating-orb orb-orange"></div>
+              <div class="floating-orb orb-blue"></div>
+              <div class="floating-card">
+                <p class="label">Fixed supply</p>
+                <p class="supply-number" id="supply-number">0</p>
+                <p class="muted">Counting to 21,000,000…</p>
+              </div>
             </div>
-          </article>
-        </section>
+          </section>
 
-        <section class="card chapters">
-          <div class="chapters-header">
-            <div>
-              <p class="chip">Pick a chapter</p>
-              <h3>Progress in snackable beats</h3>
-            </div>
-            <div class="chapter-controls">
-              <button class="ghost" id="previous-chapter" aria-label="Previous chapter">← Prev</button>
-              <button class="ghost" id="next-chapter" aria-label="Next chapter">Next →</button>
-            </div>
-          </div>
-          <div class="chapter-grid">
-            <div class="chapter-list" id="chapter-list"></div>
-            <div class="chapter-detail">
-              <p class="label" id="chapter-label">Chapter 1</p>
-              <h4 id="chapter-title">Why Bitcoin exists</h4>
-              <p class="chapter-blurb" id="chapter-blurb">Swipe or tap a chapter to load it here.</p>
-              <div class="lesson-pills" id="lesson-pills"></div>
-            </div>
-          </div>
-        </section>
+          <section class="learn-grid">
+            <article class="card learn-info">
+              <div class="chip">Why the cap?</div>
+              <h3>No money printer. Ever.</h3>
+              <p class="muted">Bitcoin will only ever have 21 million coins. Hover the steps to see how it gets there.</p>
+              <div class="supply-steps" id="supply-steps">
+                <button type="button" data-step="Genesis">Genesis block ▸ 50 BTC</button>
+                <button type="button" data-step="First halving">Halving ▸ 25 BTC</button>
+                <button type="button" data-step="Today">Today ▸ 6.25 BTC</button>
+                <button type="button" data-step="2140-ish">2140 ▸ block rewards ≈ 0</button>
+              </div>
+              <p class="step-explainer" id="step-explainer">Hover a step to peek at the emission story.</p>
+            </article>
 
-        <section class="card timeline">
-          <div class="chip">Animated timeline</div>
-          <h3>Moments that shaped the network</h3>
-          <div class="timeline-track" id="timeline-track">
-            <div class="timeline-meter"></div>
-            <div class="timeline-events" id="timeline-events"></div>
-          </div>
-          <p class="muted" id="timeline-note">Hover or tap a marker to see the beat.</p>
+            <article class="card learn-chart">
+              <div class="chip">Price journey (log-ish)</div>
+              <div class="chart-header">
+                <h3>Bitcoin through the years</h3>
+                <p class="muted" id="chart-caption">Hover to explore each era.</p>
+              </div>
+              <div class="chart" id="chart" role="img" aria-label="Interactive sparkline of bitcoin price history">
+                <svg id="chart-svg" viewBox="0 0 700 280" preserveAspectRatio="none"></svg>
+                <div class="chart-tooltip" id="chart-tooltip" hidden>
+                  <p class="tooltip-title" id="tooltip-era">2010</p>
+                  <p class="tooltip-value" id="tooltip-value">$0.00</p>
+                </div>
+              </div>
+              <div class="chart-footer">
+                <p class="muted">Data is illustrative—not live. The curve is tuned for hoverable storytelling, not financial advice.</p>
+              </div>
+            </article>
+          </section>
+
+          <section class="card learn-chapters">
+            <div class="chapters-header">
+              <div>
+                <p class="chip">Pick a chapter</p>
+                <h3>Progress in snackable beats</h3>
+              </div>
+              <div class="chapter-controls">
+                <button class="ghost" id="previous-chapter" aria-label="Previous chapter">← Prev</button>
+                <button class="ghost" id="next-chapter" aria-label="Next chapter">Next →</button>
+              </div>
+            </div>
+            <div class="chapter-grid">
+              <div class="chapter-list" id="chapter-list"></div>
+              <div class="chapter-detail">
+                <p class="label" id="chapter-label">Chapter 1</p>
+                <h4 id="chapter-title">Why Bitcoin exists</h4>
+                <p class="chapter-blurb" id="chapter-blurb">Swipe or tap a chapter to load it here.</p>
+                <div class="lesson-pills" id="lesson-pills"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card learn-timeline">
+            <div class="chip">Animated timeline</div>
+            <h3>Moments that shaped the network</h3>
+            <div class="timeline-track" id="timeline-track">
+              <div class="timeline-meter"></div>
+              <div class="timeline-events" id="timeline-events"></div>
+            </div>
+            <p class="muted" id="timeline-note">Hover or tap a marker to see the beat.</p>
+          </section>
         </section>
       </main>
     </div>
 
     <script src="main.js"></script>
   </body>
+</html>
 </html>
