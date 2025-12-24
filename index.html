@@ -26,6 +26,36 @@
         <div class="status-badge" id="connection-status">Connecting to exchange WebSocket…</div>
       </header>
 
+      <nav class="nav">
+        <button class="nav-btn active" data-target="dashboard">Dashboard</button>
+        <button class="nav-btn" data-target="markets">Markets</button>
+        <button class="nav-btn" data-target="derivatives">Derivatives</button>
+        <button class="nav-btn" data-target="education">Education Lab</button>
+      </nav>
+
+      <section class="watch-strip" aria-label="Pinned metrics">
+        <div class="watch-item">
+          <p class="label">Spot</p>
+          <p id="strip-price" class="watch-value">—</p>
+          <span class="source">Binance WS</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">24h Δ</p>
+          <p id="strip-change" class="watch-value">—</p>
+          <span class="source">CoinGecko</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">Volatility</p>
+          <p id="strip-vol" class="watch-value">Calm</p>
+          <span class="source">Simulated</span>
+        </div>
+        <div class="watch-item">
+          <p class="label">Last updated</p>
+          <p id="strip-updated" class="watch-value">Waiting…</p>
+          <span class="source">Audit trail</span>
+        </div>
+      </section>
+
       <main class="content">
         <section class="hero card">
           <div class="hero-copy">
@@ -135,6 +165,17 @@
             <button id="save-alert" type="button">Save alert</button>
             <p class="muted" id="alert-status">No alert configured yet.</p>
           </article>
+          <article class="card watchlist">
+            <header class="card-header">
+              <div>
+                <p class="chip">Watchlist</p>
+                <h3>Pro strip</h3>
+                <p class="muted">Pin your favorite metrics.</p>
+              </div>
+              <button class="ghost tiny" id="refresh-watch" type="button">Refresh</button>
+            </header>
+            <div id="watchlist-items" class="watchlist-items"></div>
+          </article>
         </section>
 
         <section class="card learning-lab">
@@ -197,7 +238,7 @@
                 <p class="muted" id="quiz-result"></p>
               </div>
             </div>
-          </div>
+          </article>
         </section>
 
         <section class="card glossary">
@@ -212,7 +253,6 @@
         </section>
       </main>
     </div>
-
     <script src="main.js"></script>
   </body>
 </html>

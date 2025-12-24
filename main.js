@@ -49,6 +49,9 @@ const missions = [
     ],
     answer: 0
   },
+];
+
+const quiz = [
   {
     id: 'volatility-regime',
     title: 'Mission: Volatility Regimes',
@@ -165,7 +168,11 @@ function animateSupplyCounter() {
     }
   };
 
-  supplyAnimationFrame = requestAnimationFrame(update);
+function formatUSD(value, digits = 0) {
+  return `$${Number(value).toLocaleString('en-US', {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits,
+  })}`;
 }
 
 function formatCompact(value) {
@@ -462,6 +469,19 @@ function attachMetricCopy() {
       setTimeout(() => card.classList.remove('copied'), 800);
     });
   });
+  quizResult.textContent = `You nailed ${correct}/${quiz.length}. Keep iterating.`;
+});
+
+copyPriceBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(priceDisplay.textContent);
+  copyPriceBtn.textContent = 'Copied';
+  setTimeout(() => (copyPriceBtn.textContent = 'Copy'), 900);
+});
+
+function initWatchStrip() {
+  stripVol.textContent = 'Calm';
+  stripPrice.textContent = '—';
+  stripUpdated.textContent = 'Waiting…';
 }
 
 animateSupplyCounter();
