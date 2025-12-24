@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bitcoin Outlook</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="brand">
+          <div class="logo">₿</div>
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1 class="title">Bitcoin Price Monitor</h1>
+          </div>
+        </div>
+        <div class="status">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status-text">Waiting for update...</span>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="error" id="error-banner" role="alert" hidden></div>
+        <section class="card price-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Current price</p>
+              <h2 class="price" id="price">--</h2>
+              <p class="subtle" id="price-direction">The next update will show the latest movement.</p>
+            </div>
+            <div class="side-column">
+              <div class="change" id="change">--</div>
+              <p class="label" id="updated">--</p>
+              <div class="actions">
+                <button id="refresh" type="button">Refresh now</button>
+              </div>
+            </div>
+          </div>
+          <div class="meta">
+            <div>
+              <p class="label">Last updated (local time)</p>
+              <p class="value" id="updated-detailed">--</p>
+            </div>
+            <div>
+              <p class="label">Previous price</p>
+              <p class="value" id="previous">--</p>
+            </div>
+            <div>
+              <p class="label">Refresh cadence</p>
+              <p class="value">Every 15 seconds with manual refresh available.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="stats-grid" aria-live="polite">
+          <article class="card stat">
+            <p class="label">Market cap rank</p>
+            <p class="stat-value" id="rank">--</p>
+            <p class="subtle">Position among all tracked assets.</p>
+          </article>
+          <article class="card stat">
+            <p class="label">Market cap</p>
+            <p class="stat-value" id="market-cap">--</p>
+            <p class="subtle">Live USD market capitalization.</p>
+          </article>
+          <article class="card stat">
+            <p class="label">24h volume</p>
+            <p class="stat-value" id="volume">--</p>
+            <p class="subtle">Total traded volume over the last day.</p>
+          </article>
+          <article class="card stat">
+            <p class="label">Fully diluted valuation</p>
+            <p class="stat-value" id="fdv">--</p>
+            <p class="subtle">Assuming max supply in circulation.</p>
+          </article>
+          <article class="card stat">
+            <p class="label">Volume / Market cap</p>
+            <p class="stat-value" id="vol-mc">--</p>
+            <p class="subtle">Activity ratio to market size.</p>
+          </article>
+          <article class="card stat">
+            <p class="label">Watchlist users</p>
+            <p class="stat-value" id="watchlist">--</p>
+            <p class="subtle">CoinGecko users tracking BTC.</p>
+          </article>
+        </section>
+
+        <section class="card range-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">24h range</p>
+              <h3 class="range-label" id="range-label">--</h3>
+            </div>
+            <div class="range-values">
+              <span id="low-24h">--</span>
+              <span id="high-24h">--</span>
+            </div>
+          </div>
+          <div class="bar" aria-hidden="true">
+            <div class="bar-fill" id="range-fill"></div>
+          </div>
+        </section>
+
+        <section class="card range-card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Supply progress</p>
+              <h3 class="range-label" id="supply-label">--</h3>
+            </div>
+            <div class="range-values">
+              <span id="circulating">--</span>
+              <span id="max-supply">--</span>
+            </div>
+          </div>
+          <div class="bar" aria-hidden="true">
+            <div class="bar-fill" id="supply-fill"></div>
+          </div>
+        </section>
+
+        <section class="card converter">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">BTC to USD converter</p>
+              <p class="subtle">Live conversion using the latest price.</p>
+            </div>
+            <div class="pill" id="converter-price">--</div>
+          </div>
+          <div class="converter-grid">
+            <label class="field">
+              <span class="label">BTC</span>
+              <input id="btc-input" type="number" step="0.00000001" min="0" placeholder="1" value="1">
+            </label>
+            <label class="field">
+              <span class="label">USD</span>
+              <input id="usd-input" type="number" step="0.01" min="0" placeholder="--">
+            </label>
+          </div>
+        </section>
+
+        <section class="card performance">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Price performance</p>
+              <p class="subtle">All-time milestones with current distance.</p>
+            </div>
+          </div>
+          <div class="meta">
+            <div>
+              <p class="label">All-time high (ATH)</p>
+              <p class="value" id="ath">--</p>
+              <p class="subtle" id="ath-date">--</p>
+            </div>
+            <div>
+              <p class="label">All-time low (ATL)</p>
+              <p class="value" id="atl">--</p>
+              <p class="subtle" id="atl-date">--</p>
+            </div>
+            <div>
+              <p class="label">Distance to ATH/ATL</p>
+              <p class="value" id="distance">--</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
