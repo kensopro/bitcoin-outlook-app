@@ -7,6 +7,7 @@ const directionEl = document.getElementById('direction');
 const statusText = document.getElementById('status-text');
 const statusDot = document.querySelector('.dot');
 const refreshBtn = document.getElementById('refresh');
+const errorEl = document.getElementById('error');
 
 let previousPrice = null;
 let timerId = null;
@@ -24,11 +25,15 @@ const percentFormatter = new Intl.NumberFormat('en-US', {
 
 async function fetchPrice() {
   setStatus('Updating...', '#22c55e');
+  clearError();
 
   try {
     const response = await fetch(API_URL);
     if (!response.ok) {
-      throw new Error('Request failed');
+      const bodyText = await response.text().catch(() => '');
+      const trimmed = bodyText.trim();
+      const snippet = trimmed ? ` Response: ${trimmed.slice(0, 240)}${trimmed.length > 240 ? '…' : ''}` : '';
+      throw new Error(`HTTP ${response.status} ${response.statusText || ''}.${snippet}`);
     }
 
     const data = await response.json();
@@ -43,6 +48,7 @@ async function fetchPrice() {
     scheduleNext();
   } catch (error) {
     console.error(error);
+    setError(`Live update failed: ${error.message}`);
     setStatus('Could not load data. Retrying in 30s.', '#ef4444');
     setTimeout(fetchPrice, 30000);
   }
@@ -79,6 +85,20 @@ function setStatus(text, color) {
     statusDot.style.background = color;
     statusDot.style.boxShadow = `0 0 0 6px ${color}33`;
   }
+}
+
+function setError(message) {
+  if (!errorEl) return;
+  errorEl.textContent = message;
+  errorEl.classList.add('show');
+  errorEl.hidden = false;
+}
+
+function clearError() {
+  if (!errorEl) return;
+  errorEl.textContent = '';
+  errorEl.classList.remove('show');
+  errorEl.hidden = true;
 }
 
 function scheduleNext() {

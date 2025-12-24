@@ -91,6 +91,22 @@ body {
   transition: background 0.2s ease;
 }
 
+.alert {
+  display: none;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecdd3;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alert.show {
+  display: block;
+}
+
 .content {
   display: grid;
   gap: 16px;
