@@ -1,48 +1,32 @@
 const supplyNumber = document.getElementById('supply-number');
-const supplyProgress = document.getElementById('supply-progress');
-const proToggle = document.getElementById('pro-toggle');
-const connectionStatus = document.getElementById('connection-status');
+const replaySupplyBtn = document.getElementById('replay-supply');
+const supplySteps = document.getElementById('supply-steps');
+const stepExplainer = document.getElementById('step-explainer');
+const chartSvg = document.getElementById('chart-svg');
+const chartTooltip = document.getElementById('chart-tooltip');
+const tooltipEra = document.getElementById('tooltip-era');
+const tooltipValue = document.getElementById('tooltip-value');
+const chartCaption = document.getElementById('chart-caption');
+const chapterList = document.getElementById('chapter-list');
+const chapterLabel = document.getElementById('chapter-label');
+const chapterTitle = document.getElementById('chapter-title');
+const chapterBlurb = document.getElementById('chapter-blurb');
+const lessonPills = document.getElementById('lesson-pills');
+const prevChapterBtn = document.getElementById('previous-chapter');
+const nextChapterBtn = document.getElementById('next-chapter');
+const timelineEvents = document.getElementById('timeline-events');
+const timelineNote = document.getElementById('timeline-note');
+const startTourBtn = document.getElementById('start-tour');
 const priceValue = document.getElementById('price-value');
 const priceSub = document.getElementById('price-sub');
-const priceSource = document.getElementById('price-source');
 const changeValue = document.getElementById('change-value');
 const changeSub = document.getElementById('change-sub');
-const changeSource = document.getElementById('change-source');
-const spreadValue = document.getElementById('spread-value');
-const spreadSub = document.getElementById('spread-sub');
-const spreadSource = document.getElementById('spread-source');
+const marketCapValue = document.getElementById('market-cap-value');
+const marketCapSub = document.getElementById('market-cap-sub');
 const volumeValue = document.getElementById('volume-value');
 const volumeSub = document.getElementById('volume-sub');
-const volumeSource = document.getElementById('volume-source');
 const lastUpdated = document.getElementById('last-updated');
-const fundingValue = document.getElementById('funding-value');
-const fundingNote = document.getElementById('funding-note');
-const vwapValue = document.getElementById('vwap-value');
-const vwapNote = document.getElementById('vwap-note');
-const riskValue = document.getElementById('risk-value');
-const riskNote = document.getElementById('risk-note');
-const microLast = document.getElementById('micro-last');
-const alertPrice = document.getElementById('alert-price');
-const alertChange = document.getElementById('alert-change');
-const alertPro = document.getElementById('alert-pro');
-const alertStatus = document.getElementById('alert-status');
-const saveAlertBtn = document.getElementById('save-alert');
-const missionList = document.getElementById('mission-list');
-const missionLabel = document.getElementById('mission-label');
-const missionTitle = document.getElementById('mission-title');
-const missionSummary = document.getElementById('mission-summary');
-const missionSteps = document.getElementById('mission-steps');
-const quizQuestion = document.getElementById('quiz-question');
-const quizOptions = document.getElementById('quiz-options');
-const submitQuiz = document.getElementById('submit-quiz');
-const quizResult = document.getElementById('quiz-result');
 
-let proEnabled = false;
-let alertConfig = null;
-let ws;
-let wsHeartbeat;
-let referencePrice = null;
-let lastTicker = null;
 const SUPPLY_CAP = 21_000_000;
 const supplyStart = 19_700_000; // approximate circulating supply anchor for the animation
 
@@ -104,7 +88,84 @@ const missions = [
 ];
 
 function formatCurrency(value) {
-  return `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+}
+
+function formatCompact(value) {
+  return `$${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
+}
+
+function updateStatus(text) {
+  if (lastUpdated) {
+    lastUpdated.textContent = text;
+  }
+}
+
+async function fetchMetrics() {
+  updateStatus('Fetching live market data…');
+  const response = await fetch(
+    'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&sparkline=false'
+  );
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+}
+
+function setChangeTone(value) {
+  changeValue.classList.toggle('positive', value >= 0);
+  changeValue.classList.toggle('negative', value < 0);
+  changeSub.textContent = value >= 0 ? 'Green day for the orange coin.' : 'Pullback on the boards.';
+}
+
+function updateMetricCards(data) {
+  const marketData = data.market_data;
+  priceValue.textContent = formatCurrency(marketData.current_price.usd);
+  priceSub.textContent = `Cap change ${marketData.market_cap_change_percentage_24h.toFixed(2)}% over 24h`;
+
+  const change = marketData.price_change_percentage_24h;
+  changeValue.textContent = `${change.toFixed(2)}%`;
+  setChangeTone(change);
+
+  marketCapValue.textContent = formatCompact(marketData.market_cap.usd);
+  marketCapSub.textContent = `${marketData.circulating_supply.toLocaleString('en-US')} BTC circulating`;
+
+  volumeValue.textContent = formatCompact(marketData.total_volume.usd);
+  volumeSub.textContent = '24h exchange and on-chain turnover';
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  updateStatus(`Live • updated ${timestamp}`);
+}
+
+async function hydrateMetrics() {
+  try {
+    const data = await fetchMetrics();
+    updateMetricCards(data);
+  } catch (error) {
+    updateStatus('Could not load live data. Retry in a moment.');
+    priceSub.textContent = 'Check your connection and refresh.';
+    console.error('Error fetching metrics', error);
+  }
+}
+
+function animateSupplyCounter() {
+  cancelAnimationFrame(supplyAnimationFrame);
+  const start = performance.now();
+  const duration = 1200;
+
+  const update = (now) => {
+    const progress = Math.min(1, (now - start) / duration);
+    const value = Math.floor(progress * SUPPLY_CAP);
+    supplyNumber.textContent = value.toLocaleString('en-US');
+
+    if (progress < 1) {
+      supplyAnimationFrame = requestAnimationFrame(update);
+    } else {
+      supplyNumber.textContent = SUPPLY_CAP.toLocaleString('en-US');
+    }
+  };
+
+  supplyAnimationFrame = requestAnimationFrame(update);
 }
 
 function formatCompact(value) {
@@ -390,16 +451,29 @@ function loadMission(index) {
   submitQuiz.dataset.answer = mission.answer;
 }
 
-function gradeQuiz() {
-  const choice = quizOptions.querySelector('input[name="quiz"]:checked');
-  if (!choice) {
-    quizResult.textContent = 'Pick an option to grade.';
-    return;
-  }
-  const answer = Number(submitQuiz.dataset.answer);
-  const selected = Number(choice.value);
-  quizResult.textContent = selected === answer ? 'Correct. Tie it back to the live tiles above.' : 'Try again.';
+function attachMetricCopy() {
+  document.querySelectorAll('.stat-card').forEach((card) => {
+    const targetId = card.dataset.copyTarget;
+    const target = document.getElementById(targetId);
+    card.addEventListener('click', () => {
+      if (!target) return;
+      navigator.clipboard.writeText(target.textContent.trim());
+      card.classList.add('copied');
+      setTimeout(() => card.classList.remove('copied'), 800);
+    });
+  });
 }
+
+animateSupplyCounter();
+wireSupplySteps();
+renderChart();
+renderChapters();
+renderTimeline();
+attachChapterControls();
+animateTourCTA();
+attachMetricCopy();
+hydrateMetrics();
+setInterval(hydrateMetrics, 60_000);
 
 animateSupply();
 attachCopyHandlers();

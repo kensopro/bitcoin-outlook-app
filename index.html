@@ -29,12 +29,9 @@
       <main class="content">
         <section class="hero card">
           <div class="hero-copy">
-            <p class="hero-kicker">Live market + coach</p>
-            <h2>Low-latency metrics with explainers you can act on.</h2>
-            <p class="muted">
-              WebSocket-first price feed with fallback polling. Every widget shows last update time, source, and a
-              quick “why it matters” tooltip.
-            </p>
+            <p class="hero-kicker">Learn-by-doing journey</p>
+            <h2>Real-time Bitcoin pulse with snackable learning.</h2>
+            <p class="muted">Live market stats plus interactive explainers. Watch the supply counter sprint to 21M while you explore how Bitcoin works, why it matters, and what to watch.</p>
             <div class="cta-row">
               <button id="pro-toggle" type="button" aria-pressed="false">Enable Pro Mode</button>
               <div class="pill">Audit trail: timestamps + sources on every tile</div>
@@ -53,50 +50,34 @@
         </section>
 
         <section class="card metrics">
-          <div class="chip">Dashboard · Pro home</div>
+          <div class="chip">Live network pulse</div>
           <div class="metrics-header">
             <div>
-              <h3>BTC price & multi-feed sanity checks</h3>
-              <p class="muted">WebSocket feed (Binance) with CoinGecko fallback. Tap to copy values.</p>
+              <h3>Bitcoin price & market vitals</h3>
+              <p class="muted">Updated in real time. Tap a tile to copy the value.</p>
             </div>
             <div class="pill" id="last-updated">Waiting for data…</div>
           </div>
           <div class="metric-grid">
             <button class="stat-card" type="button" data-copy-target="price-value">
-              <div class="stat-top">
-                <p class="label">Spot price (USD)</p>
-                <span class="info" data-tooltip="WebSocket miniTicker price. Updates ~1s.">ℹ︎</span>
-              </div>
+              <p class="label">Spot price (USD)</p>
               <p class="stat-value" id="price-value">—</p>
-              <p class="stat-sub" id="price-sub">Live feed not ready yet.</p>
-              <p class="muted small" id="price-source">Source: Binance WS</p>
+              <p class="stat-sub" id="price-sub">Connecting to exchange-grade feeds…</p>
             </button>
             <button class="stat-card" type="button" data-copy-target="change-value">
-              <div class="stat-top">
-                <p class="label">24h change</p>
-                <span class="info" data-tooltip="Based on current vs 24h open.">ℹ︎</span>
-              </div>
+              <p class="label">24h change</p>
               <p class="stat-value" id="change-value">—</p>
               <p class="stat-sub" id="change-sub">Volatility paints the story.</p>
-              <p class="muted small" id="change-source">Source: Binance WS</p>
             </button>
-            <button class="stat-card" type="button" data-copy-target="spread-value">
-              <div class="stat-top">
-                <p class="label">Spread vs index</p>
-                <span class="info" data-tooltip="Difference between live feed and CoinGecko reference.">ℹ︎</span>
-              </div>
-              <p class="stat-value" id="spread-value">—</p>
-              <p class="stat-sub" id="spread-sub">Checks for exchange premium/discount.</p>
-              <p class="muted small" id="spread-source">Awaiting reference price…</p>
+            <button class="stat-card" type="button" data-copy-target="market-cap-value">
+              <p class="label">Market cap</p>
+              <p class="stat-value" id="market-cap-value">—</p>
+              <p class="stat-sub" id="market-cap-sub">Network value in circulating coins.</p>
             </button>
             <button class="stat-card" type="button" data-copy-target="volume-value">
-              <div class="stat-top">
-                <p class="label">24h volume</p>
-                <span class="info" data-tooltip="CoinGecko market volume, refreshed every minute.">ℹ︎</span>
-              </div>
+              <p class="label">24h volume</p>
               <p class="stat-value" id="volume-value">—</p>
-              <p class="stat-sub" id="volume-sub">Turnover snapshot.</p>
-              <p class="muted small" id="volume-source">Source: CoinGecko</p>
+              <p class="stat-sub" id="volume-sub">Exchange and on-chain activity snapshot.</p>
             </button>
           </div>
         </section>
@@ -156,8 +137,41 @@
           </article>
         </section>
 
-        <section class="card education">
+        <section class="card learning-lab">
           <div class="learning-header">
+            <div>
+              <p class="chip">Crash course</p>
+              <h3>Education that respects your time</h3>
+              <p class="muted">Each tile is a practical takeaway. Hover to reveal why it matters in the real world.</p>
+            </div>
+            <div class="pill">Built for newcomers & curious builders</div>
+          </div>
+          <div class="learning-grid" id="learning-grid">
+            <article class="learning-card" data-cta="sound-money">
+              <h4>21M hard cap</h4>
+              <p class="muted">Every four years the subsidy halves, capping supply and forcing the network to compete on fees.</p>
+              <p class="learning-note">Why it matters: Inflation resistance without a central bank.</p>
+            </article>
+            <article class="learning-card" data-cta="security">
+              <h4>Proof-of-Work security</h4>
+              <p class="muted">Miners burn energy to anchor blocks. Attacking Bitcoin means competing with global industrial hardware.</p>
+              <p class="learning-note">Why it matters: Game theory makes fraud extremely expensive.</p>
+            </article>
+            <article class="learning-card" data-cta="self-custody">
+              <h4>Keys, not accounts</h4>
+              <p class="muted">Wallets prove ownership via private keys. Exchanges are convenience, not custody.</p>
+              <p class="learning-note">Why it matters: Self-custody removes single points of failure.</p>
+            </article>
+            <article class="learning-card" data-cta="layers">
+              <h4>Layers stack</h4>
+              <p class="muted">Lightning routes instant payments; the base chain settles final truth. Same asset, different speeds.</p>
+              <p class="learning-note">Why it matters: Scalability without sacrificing decentralization.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="card chapters">
+          <div class="chapters-header">
             <div>
               <p class="chip">Education lab</p>
               <h3>Interactive missions linked to live metrics</h3>

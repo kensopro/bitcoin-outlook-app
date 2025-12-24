@@ -109,6 +109,73 @@ body {
   overflow: hidden;
 }
 
+.metrics {
+  display: grid;
+  gap: 16px;
+}
+
+.metrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  background: radial-gradient(circle at 20% 20%, rgba(251, 191, 36, 0.08), transparent 60%),
+    radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.08), transparent 40%),
+    rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: left;
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 10px 30px rgba(251, 191, 36, 0.2);
+}
+
+.stat-card.copied {
+  border-color: rgba(34, 211, 238, 0.7);
+  box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+}
+
+.stat-value {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.stat-value.positive {
+  color: #34d399;
+}
+
+.stat-value.negative {
+  color: #f87171;
+}
+
+.stat-sub {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -388,11 +455,52 @@ button:focus-visible {
   gap: 10px;
 }
 
-.micro-card {
-  padding: 12px;
+.learning-lab {
+  display: grid;
+  gap: 14px;
+}
+
+.learning-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.learning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.learning-card {
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.learning-card:hover {
+  border-color: rgba(34, 211, 238, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(34, 211, 238, 0.16);
+}
+
+.learning-card h4 {
+  margin: 0;
+}
+
+.learning-note {
+  margin: 0;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.chapters {
   display: grid;
   gap: 4px;
 }
