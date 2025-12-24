@@ -1,314 +1,414 @@
 const supplyNumber = document.getElementById('supply-number');
-const replaySupplyBtn = document.getElementById('replay-supply');
-const supplySteps = document.getElementById('supply-steps');
-const stepExplainer = document.getElementById('step-explainer');
-const chartSvg = document.getElementById('chart-svg');
-const chartTooltip = document.getElementById('chart-tooltip');
-const tooltipEra = document.getElementById('tooltip-era');
-const tooltipValue = document.getElementById('tooltip-value');
-const chartCaption = document.getElementById('chart-caption');
-const chapterList = document.getElementById('chapter-list');
-const chapterLabel = document.getElementById('chapter-label');
-const chapterTitle = document.getElementById('chapter-title');
-const chapterBlurb = document.getElementById('chapter-blurb');
-const lessonPills = document.getElementById('lesson-pills');
-const prevChapterBtn = document.getElementById('previous-chapter');
-const nextChapterBtn = document.getElementById('next-chapter');
-const timelineEvents = document.getElementById('timeline-events');
-const timelineNote = document.getElementById('timeline-note');
-const startTourBtn = document.getElementById('start-tour');
+const supplyProgress = document.getElementById('supply-progress');
+const proToggle = document.getElementById('pro-toggle');
+const connectionStatus = document.getElementById('connection-status');
+const priceValue = document.getElementById('price-value');
+const priceSub = document.getElementById('price-sub');
+const priceSource = document.getElementById('price-source');
+const changeValue = document.getElementById('change-value');
+const changeSub = document.getElementById('change-sub');
+const changeSource = document.getElementById('change-source');
+const spreadValue = document.getElementById('spread-value');
+const spreadSub = document.getElementById('spread-sub');
+const spreadSource = document.getElementById('spread-source');
+const volumeValue = document.getElementById('volume-value');
+const volumeSub = document.getElementById('volume-sub');
+const volumeSource = document.getElementById('volume-source');
+const lastUpdated = document.getElementById('last-updated');
+const fundingValue = document.getElementById('funding-value');
+const fundingNote = document.getElementById('funding-note');
+const vwapValue = document.getElementById('vwap-value');
+const vwapNote = document.getElementById('vwap-note');
+const riskValue = document.getElementById('risk-value');
+const riskNote = document.getElementById('risk-note');
+const microLast = document.getElementById('micro-last');
+const alertPrice = document.getElementById('alert-price');
+const alertChange = document.getElementById('alert-change');
+const alertPro = document.getElementById('alert-pro');
+const alertStatus = document.getElementById('alert-status');
+const saveAlertBtn = document.getElementById('save-alert');
+const missionList = document.getElementById('mission-list');
+const missionLabel = document.getElementById('mission-label');
+const missionTitle = document.getElementById('mission-title');
+const missionSummary = document.getElementById('mission-summary');
+const missionSteps = document.getElementById('mission-steps');
+const quizQuestion = document.getElementById('quiz-question');
+const quizOptions = document.getElementById('quiz-options');
+const submitQuiz = document.getElementById('submit-quiz');
+const quizResult = document.getElementById('quiz-result');
 
+let proEnabled = false;
+let alertConfig = null;
+let ws;
+let wsHeartbeat;
+let referencePrice = null;
+let lastTicker = null;
 const SUPPLY_CAP = 21_000_000;
-let supplyAnimationFrame = null;
+const supplyStart = 19_700_000; // approximate circulating supply anchor for the animation
 
-const supplyNarrative = {
-  Genesis: '2009: 50 BTC per block. Digital scarcity begins.',
-  'First halving': '2012: Rewards drop to 25 BTC. Supply growth halves.',
-  Today: 'Today: 6.25 BTC. Inflation rate keeps shrinking.',
-  '2140-ish': 'Around 2140: block subsidy ≈ 0. Fees secure the network.',
-};
-
-const priceStory = [
-  { era: '2009', value: 0.0008, note: 'Pizza was still a dream.' },
-  { era: '2011', value: 1, note: 'Parity with the dollar.' },
-  { era: '2013', value: 200, note: 'First big rally and learning loop.' },
-  { era: '2017', value: 19000, note: 'The original mania run.' },
-  { era: '2020', value: 10000, note: 'Halving meets macro chaos.' },
-  { era: '2021', value: 69000, note: 'ATH driven by institutions & memes.' },
-  { era: '2022', value: 16000, note: 'Reset. Builders keep building.' },
-  { era: '2024', value: 43000, note: 'ETF era. Block subsidy = 3.125 BTC.' },
+const missions = [
+  {
+    id: 'funding-basics',
+    title: 'Mission: Funding Rate Basics',
+    summary: 'See how positive funding can pressure long positioning.',
+    label: 'Perps 101',
+    steps: [
+      'Watch the live price feed; funding updates every tick as an estimate.',
+      'Toggle Pro Mode to reveal the VWAP gap and watch how it impacts the risk gauge.',
+      'Apply: If funding is positive and spread widens, consider fade-rally scenario.'
+    ],
+    question: 'When funding is high and price is above VWAP, what is the usual risk?',
+    options: [
+      'Longs pay shorts; risk of long squeeze if liquidity thins.',
+      'Nothing changes; funding has no impact.',
+      'Shorts pay longs; squeezes always happen up only.'
+    ],
+    answer: 0
+  },
+  {
+    id: 'volatility-regime',
+    title: 'Mission: Volatility Regimes',
+    summary: 'Use 24h change + volume pulse to label compression or expansion.',
+    label: 'Volatility',
+    steps: [
+      'Look at 24h change alongside volume to gauge expansion.',
+      'If change is inside ±1% and volume is muted, expect compression.',
+      'Apply: Alerts on volatility breakout need higher volume confirmation.'
+    ],
+    question: 'Which combo hints at expansion risk?',
+    options: [
+      'Large 24h move with rising volume',
+      'Flat price and flat volume',
+      'Falling price and falling volume only'
+    ],
+    answer: 0
+  },
+  {
+    id: 'spread-sanity',
+    title: 'Mission: Spread Sanity Check',
+    summary: 'Use the spread tile to detect exchange premium/discount risk.',
+    label: 'Market Quality',
+    steps: [
+      'Watch spread vs index; above 0.25% means dislocation risk.',
+      'If Pro filter is on, alerts only fire when spread is healthy (< 0.2%).',
+      'Apply: widen slippage assumptions when spread is elevated.'
+    ],
+    question: 'Why does a wide spread matter?',
+    options: [
+      'It can distort fills and trigger unwanted liquidations.',
+      'It makes trading free of fees.',
+      'It guarantees arbitrage profits instantly.'
+    ],
+    answer: 0
+  }
 ];
 
-const chapters = [
-  {
-    label: 'Chapter 1',
-    title: 'Why Bitcoin exists',
-    blurb: 'Fiat currencies can be inflated at will. Bitcoin hard-codes scarcity and verification.',
-    lessons: ['Digital scarcity 101', 'Open-source money', 'Trust minimization'],
-  },
-  {
-    label: 'Chapter 2',
-    title: 'How blocks tick',
-    blurb: 'Miners assemble transactions, solve puzzles, and anchor new blocks to the longest chain.',
-    lessons: ['Proof-of-Work basics', 'Difficulty adjustments', 'Block headers & hashes'],
-  },
-  {
-    label: 'Chapter 3',
-    title: 'Halvings & supply',
-    blurb: 'Every ~4 years, new issuance halves. The countdown to 21 million is baked in.',
-    lessons: ['Reward schedule', 'Security incentives', '2140 endgame'],
-  },
-  {
-    label: 'Chapter 4',
-    title: 'Owning bitcoin',
-    blurb: 'Not your keys, not your coins. Wallets sign transactions without revealing secrets.',
-    lessons: ['Keys & seeds', 'On-chain vs. Lightning', 'Self-custody hygiene'],
-  },
-  {
-    label: 'Chapter 5',
-    title: 'Cultural vibes',
-    blurb: 'From cypherpunks to ETFs, culture drives adoption and the memes keep shipping.',
-    lessons: ['Communities & memes', 'Narratives over time', 'Builders vs. speculators'],
-  },
-];
+function formatCurrency(value) {
+  return `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+}
 
-const timeline = [
-  { year: '2008', title: 'Whitepaper drop', detail: 'Satoshi publishes the blueprint for peer-to-peer cash.' },
-  { year: '2009', title: 'Genesis block', detail: 'Block 0: “Chancellor on brink of second bailout for banks.”' },
-  { year: '2012', title: 'First halving', detail: 'Reward halves to 25 BTC. Scarcity goes on autopilot.' },
-  { year: '2017', title: 'Scaling debates', detail: 'SegWit activates, paving the way for Lightning.' },
-  { year: '2021', title: 'Taproot upgrade', detail: 'Better privacy and smart contract flexibility.' },
-  { year: '2024', title: 'ETF era', detail: 'Traditional finance meets censorship-resistant rails.' },
-];
+function formatCompact(value) {
+  return `$${new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value)}`;
+}
 
-function animateSupplyCounter() {
-  cancelAnimationFrame(supplyAnimationFrame);
-  const start = performance.now();
-  const duration = 1200;
+function setChangeTone(value) {
+  changeValue.classList.toggle('positive', value >= 0);
+  changeValue.classList.toggle('negative', value < 0);
+  changeSub.textContent = value >= 0 ? 'Green day for the orange coin.' : 'Pullback on the boards.';
+}
 
-  const update = (now) => {
-    const progress = Math.min(1, (now - start) / duration);
-    const value = Math.floor(progress * SUPPLY_CAP);
-    supplyNumber.textContent = value.toLocaleString('en-US');
+function setConnectionStatus(text, healthy = false) {
+  connectionStatus.textContent = text;
+  connectionStatus.classList.toggle('healthy', healthy);
+}
 
-    if (progress < 1) {
-      supplyAnimationFrame = requestAnimationFrame(update);
-    } else {
-      supplyNumber.textContent = SUPPLY_CAP.toLocaleString('en-US');
+function updateStatusBadge(timestamp) {
+  lastUpdated.textContent = `Live • updated ${timestamp}`;
+}
+
+function updateMicroLast(timestamp) {
+  microLast.textContent = `Last updated: ${timestamp}`;
+}
+
+function computeSpread(livePrice) {
+  if (!referencePrice || !livePrice) return null;
+  const spread = ((livePrice - referencePrice) / referencePrice) * 100;
+  return spread;
+}
+
+function refreshRiskGauge(ticker) {
+  if (!ticker) return;
+  const price = Number(ticker.c);
+  const changePct = Number(ticker.P);
+  const volumeUsd = Number(ticker.q);
+  const spread = computeSpread(price);
+  const riskScore = [
+    Math.min(Math.abs(changePct) / 5, 1),
+    spread ? Math.min(Math.abs(spread) / 0.3, 1) : 0,
+    volumeUsd > 1_000_000_000 ? 0.2 : 0.5
+  ].reduce((a, b) => a + b, 0) / 3;
+
+  const label = riskScore > 0.6 ? 'High' : riskScore > 0.3 ? 'Moderate' : 'Calm';
+  riskValue.textContent = `${label} (${(riskScore * 100).toFixed(0)}%)`;
+  riskNote.textContent = `Factors: |Δ| ${changePct.toFixed(2)}% · spread ${spread ? spread.toFixed(2) : '—'}% · volume ${
+    volumeUsd > 0 ? 'active' : 'muted'
+  }`;
+}
+
+function updateVWAPGap(ticker) {
+  if (!ticker) return;
+  const price = Number(ticker.c);
+  const open = Number(ticker.o);
+  const avg = (price + open) / 2;
+  const gap = ((price - avg) / avg) * 100;
+  vwapValue.textContent = `${gap.toFixed(2)}%`;
+  vwapNote.textContent = gap > 0 ? 'Price above rolling VWAP' : 'Price below VWAP';
+}
+
+function updateFunding(ticker) {
+  if (!ticker) return;
+  const rate = Number(ticker.P) / 100 / 24; // rough proxy: convert 24h change to hourly drift
+  fundingValue.textContent = `${(rate * 100).toFixed(4)}% est.`;
+  fundingNote.textContent = rate > 0 ? 'Longs likely paying shorts.' : 'Shorts likely paying longs.';
+}
+
+function applyTickerUpdate(ticker) {
+  lastTicker = ticker;
+  const price = Number(ticker.c);
+  const changePct = Number(ticker.P);
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  priceValue.textContent = formatCurrency(price);
+  priceSub.textContent = `24h open ${formatCurrency(ticker.o)}`;
+  changeValue.textContent = `${changePct.toFixed(2)}%`;
+  setChangeTone(changePct);
+  changeSource.textContent = `Source: Binance WS @ ${timestamp}`;
+  priceSource.textContent = `Source: Binance WS @ ${timestamp}`;
+  updateStatusBadge(timestamp);
+
+  const spread = computeSpread(price);
+  if (spread !== null) {
+    spreadValue.textContent = `${spread.toFixed(3)}%`;
+    spreadSub.textContent = spread > 0 ? 'Exchange premium vs index' : 'Trading at discount to index';
+    spreadSource.textContent = `Index from CoinGecko @ ${timestamp}`;
+  }
+
+  updateVWAPGap(ticker);
+  updateFunding(ticker);
+  refreshRiskGauge(ticker);
+  updateMicroLast(timestamp);
+  evaluateAlert();
+}
+
+async function fetchReferenceMetrics() {
+  try {
+    const response = await fetch(
+      'https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&sparkline=false'
+    );
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
     }
-  };
+    const data = await response.json();
+    const market = data.market_data;
+    referencePrice = market.current_price.usd;
+    volumeValue.textContent = formatCompact(market.total_volume.usd);
+    volumeSub.textContent = `${market.price_change_percentage_24h.toFixed(2)}% vs 24h price move`;
+    volumeSource.textContent = `Source: CoinGecko @ ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-  supplyAnimationFrame = requestAnimationFrame(update);
-}
-
-function wireSupplySteps() {
-  supplySteps.querySelectorAll('button').forEach((btn) => {
-    const updateText = () => {
-      const label = btn.dataset.step;
-      stepExplainer.textContent = supplyNarrative[label] || 'Scarcity is enforced every block.';
-      btn.classList.add('active');
-    };
-
-    const reset = () => btn.classList.remove('active');
-
-    btn.addEventListener('mouseenter', updateText);
-    btn.addEventListener('focus', updateText);
-    btn.addEventListener('mouseleave', reset);
-    btn.addEventListener('blur', reset);
-  });
-}
-
-function renderChart() {
-  if (!chartSvg) return;
-  const width = 700;
-  const height = 280;
-  chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  chartSvg.innerHTML = '';
-
-  const values = priceStory.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const padding = 36;
-  const xStep = (width - padding * 2) / (priceStory.length - 1);
-
-  const points = priceStory.map((point, index) => {
-    const x = padding + index * xStep;
-    const normalized = (point.value - min) / (max - min);
-    const y = height - padding - normalized * (height - padding * 2);
-    return { ...point, x, y };
-  });
-
-  const pathD = points
-    .map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(2)} ${pt.y.toFixed(2)}`)
-    .join(' ');
-
-  const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-  gradient.id = 'line-gradient';
-  gradient.setAttribute('x1', '0%');
-  gradient.setAttribute('x2', '100%');
-  gradient.setAttribute('y1', '0%');
-  gradient.setAttribute('y2', '0%');
-
-  const stopA = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stopA.setAttribute('offset', '0%');
-  stopA.setAttribute('stop-color', '#fbbf24');
-  gradient.appendChild(stopA);
-
-  const stopB = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stopB.setAttribute('offset', '100%');
-  stopB.setAttribute('stop-color', '#22d3ee');
-  gradient.appendChild(stopB);
-
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.appendChild(gradient);
-  chartSvg.appendChild(defs);
-
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  path.setAttribute('d', pathD);
-  path.setAttribute('fill', 'none');
-  path.setAttribute('stroke', 'url(#line-gradient)');
-  path.setAttribute('stroke-width', '4');
-  path.setAttribute('stroke-linecap', 'round');
-  chartSvg.appendChild(path);
-
-  points.forEach((point) => {
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    node.setAttribute('cx', point.x);
-    node.setAttribute('cy', point.y);
-    node.setAttribute('r', '8');
-    node.setAttribute('fill', '#0f172a');
-    node.setAttribute('stroke', 'url(#line-gradient)');
-    node.setAttribute('stroke-width', '3');
-    node.classList.add('chart-dot');
-
-    node.addEventListener('mouseenter', () => showTooltip(point));
-    node.addEventListener('focus', () => showTooltip(point));
-
-    chartSvg.appendChild(node);
-  });
-
-  chartSvg.addEventListener('mouseleave', hideTooltip);
-}
-
-function showTooltip(point) {
-  chartTooltip.hidden = false;
-  tooltipEra.textContent = point.era;
-  tooltipValue.textContent = `$${point.value.toLocaleString('en-US')}`;
-  chartCaption.textContent = point.note;
-
-  const left = (point.x / 700) * 100;
-  const top = (point.y / 280) * 100;
-  chartTooltip.style.left = `${left}%`;
-  chartTooltip.style.top = `${top}%`;
-}
-
-function hideTooltip() {
-  chartTooltip.hidden = true;
-  chartCaption.textContent = 'Hover to explore each era.';
-}
-
-function renderChapters() {
-  chapters.forEach((chapter, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = chapter.title;
-    button.dataset.index = index;
-    button.className = 'chapter-item';
-    button.addEventListener('click', () => loadChapter(index));
-    chapterList.appendChild(button);
-  });
-
-  loadChapter(0);
-}
-
-function loadChapter(index) {
-  const chapter = chapters[index];
-  if (!chapter) return;
-
-  chapterLabel.textContent = chapter.label;
-  chapterTitle.textContent = chapter.title;
-  chapterBlurb.textContent = chapter.blurb;
-
-  lessonPills.innerHTML = '';
-  chapter.lessons.forEach((lesson) => {
-    const pill = document.createElement('span');
-    pill.className = 'pill';
-    pill.textContent = lesson;
-    lessonPills.appendChild(pill);
-  });
-
-  chapterList.querySelectorAll('button').forEach((btn) => {
-    btn.classList.toggle('active', Number(btn.dataset.index) === index);
-  });
-
-  lessonPills.scrollLeft = 0;
-}
-
-function renderTimeline() {
-  timeline.forEach((event, index) => {
-    const marker = document.createElement('button');
-    marker.type = 'button';
-    marker.className = 'timeline-marker';
-    marker.dataset.index = index;
-    marker.innerHTML = `<span>${event.year}</span>`;
-
-    const label = document.createElement('div');
-    label.className = 'timeline-label';
-    label.innerHTML = `<strong>${event.title}</strong><p>${event.detail}</p>`;
-
-    const container = document.createElement('div');
-    container.className = 'timeline-node';
-    container.appendChild(marker);
-    container.appendChild(label);
-
-    marker.addEventListener('mouseenter', () => highlightEvent(index));
-    marker.addEventListener('focus', () => highlightEvent(index));
-    marker.addEventListener('click', () => highlightEvent(index));
-
-    timelineEvents.appendChild(container);
-  });
-
-  highlightEvent(0);
-}
-
-function highlightEvent(index) {
-  timelineEvents.querySelectorAll('.timeline-marker').forEach((marker) => {
-    marker.classList.toggle('active', Number(marker.dataset.index) === index);
-  });
-
-  timelineEvents.querySelectorAll('.timeline-label').forEach((label, labelIndex) => {
-    label.classList.toggle('visible', labelIndex === index);
-  });
-
-  const active = timeline[index];
-  if (active) {
-    timelineNote.textContent = `${active.year}: ${active.detail}`;
+    const spread = computeSpread(lastTicker ? Number(lastTicker.c) : null);
+    if (spread !== null) {
+      spreadValue.textContent = `${spread.toFixed(3)}%`;
+      spreadSub.textContent = spread > 0 ? 'Exchange premium vs index' : 'Trading at discount to index';
+      spreadSource.textContent = `Index from CoinGecko @ ${new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+    }
+  } catch (error) {
+    console.error('Error fetching metrics', error);
+    volumeSub.textContent = 'Could not load CoinGecko metrics';
   }
 }
 
-function cycleChapter(step) {
-  const activeIndex = Array.from(chapterList.children).findIndex((btn) => btn.classList.contains('active'));
-  const nextIndex = (activeIndex + step + chapters.length) % chapters.length;
-  loadChapter(nextIndex);
-}
+function connectWebSocket() {
+  if (ws) {
+    ws.close();
+  }
+  ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@miniTicker');
 
-function attachChapterControls() {
-  prevChapterBtn.addEventListener('click', () => cycleChapter(-1));
-  nextChapterBtn.addEventListener('click', () => cycleChapter(1));
-}
+  ws.addEventListener('open', () => {
+    setConnectionStatus('Connected to Binance WebSocket', true);
+    wsHeartbeat = setInterval(() => ws.send(JSON.stringify({ method: 'PING' })), 30_000);
+  });
 
-function animateTourCTA() {
-  startTourBtn.addEventListener('click', () => {
-    document.querySelector('.chapters').scrollIntoView({ behavior: 'smooth' });
+  ws.addEventListener('message', (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (!data.c) return;
+      applyTickerUpdate(data);
+    } catch (error) {
+      console.error('Error parsing ticker', error);
+    }
+  });
+
+  ws.addEventListener('close', () => {
+    setConnectionStatus('WebSocket disconnected. Reconnecting…');
+    clearInterval(wsHeartbeat);
+    setTimeout(connectWebSocket, 2000);
+  });
+
+  ws.addEventListener('error', () => {
+    setConnectionStatus('WebSocket error. Falling back to polling…');
+    clearInterval(wsHeartbeat);
   });
 }
 
-animateSupplyCounter();
-wireSupplySteps();
-renderChart();
-renderChapters();
-renderTimeline();
-attachChapterControls();
-animateTourCTA();
+function animateSupply() {
+  let progress = 0;
+  const duration = 2000;
+  const start = performance.now();
 
-replaySupplyBtn.addEventListener('click', animateSupplyCounter);
+  const tick = (now) => {
+    progress = Math.min(1, (now - start) / duration);
+    const current = Math.floor(supplyStart + (SUPPLY_CAP - supplyStart) * progress * 0.8);
+    supplyNumber.textContent = current.toLocaleString('en-US');
+    supplyProgress.textContent = `${((current / SUPPLY_CAP) * 100).toFixed(2)}% of cap issued`;
+
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    }
+  };
+
+  requestAnimationFrame(tick);
+}
+
+function attachCopyHandlers() {
+  document.querySelectorAll('.stat-card').forEach((card) => {
+    const targetId = card.dataset.copyTarget;
+    const target = document.getElementById(targetId);
+    card.addEventListener('click', () => {
+      if (!target) return;
+      navigator.clipboard.writeText(target.textContent.trim());
+      card.classList.add('copied');
+      setTimeout(() => card.classList.remove('copied'), 900);
+    });
+  });
+}
+
+function wireTooltipHover() {
+  document.querySelectorAll('[data-tooltip]').forEach((el) => {
+    el.setAttribute('tabindex', '0');
+  });
+}
+
+function toggleProMode() {
+  proEnabled = !proEnabled;
+  proToggle.textContent = proEnabled ? 'Pro Mode enabled' : 'Enable Pro Mode';
+  proToggle.setAttribute('aria-pressed', String(proEnabled));
+  document.body.classList.toggle('pro', proEnabled);
+  vwapNote.textContent = proEnabled ? 'VWAP deviation visible.' : 'Toggle Pro Mode to reveal.';
+  riskNote.textContent = proEnabled ? 'Risk gauge shows composite mix.' : 'Turn on Pro Mode to inspect components.';
+  evaluateAlert();
+}
+
+function evaluateAlert() {
+  if (!alertConfig || !lastTicker) return;
+  const price = Number(lastTicker.c);
+  const changePct = Number(lastTicker.P);
+  const spread = computeSpread(price);
+  const priceTriggered = alertConfig.price && price >= alertConfig.price;
+  const changeTriggered = alertConfig.change && changePct >= alertConfig.change;
+  const spreadOk = !alertConfig.pro || (spread !== null && Math.abs(spread) < 0.2);
+
+  if ((priceTriggered || changeTriggered) && spreadOk) {
+    alertStatus.textContent = `ALERT: Price ${formatCurrency(price)} · Δ ${changePct.toFixed(2)}% · Spread ${
+      spread ? spread.toFixed(2) : '—'
+    }%`;
+    alertStatus.classList.add('active');
+  }
+}
+
+function saveAlert() {
+  const price = Number(alertPrice.value);
+  const changePct = Number(alertChange.value);
+  alertConfig = {
+    price: Number.isFinite(price) ? price : null,
+    change: Number.isFinite(changePct) ? changePct : null,
+    pro: alertPro.checked
+  };
+  alertStatus.textContent = `Alert armed: price >= ${alertConfig.price || '—'} | 24h change >= ${
+    alertConfig.change || '—'
+  }%${alertConfig.pro ? ' with Pro filter' : ''}`;
+  alertStatus.classList.remove('active');
+}
+
+function renderMissions() {
+  missions.forEach((mission, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mission-pill';
+    button.textContent = mission.title;
+    button.dataset.index = index;
+    button.addEventListener('click', () => loadMission(index));
+    missionList.appendChild(button);
+  });
+  loadMission(0);
+}
+
+function loadMission(index) {
+  const mission = missions[index];
+  if (!mission) return;
+
+  missionLabel.textContent = mission.label;
+  missionTitle.textContent = mission.title;
+  missionSummary.textContent = mission.summary;
+  missionSteps.innerHTML = '';
+  mission.steps.forEach((step) => {
+    const li = document.createElement('li');
+    li.textContent = step;
+    missionSteps.appendChild(li);
+  });
+
+  quizQuestion.textContent = mission.question;
+  quizOptions.innerHTML = '';
+  mission.options.forEach((opt, idx) => {
+    const label = document.createElement('label');
+    label.className = 'checkbox';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'quiz';
+    input.value = idx;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(opt));
+    quizOptions.appendChild(label);
+  });
+
+  quizResult.textContent = '';
+  missionList.querySelectorAll('.mission-pill').forEach((btn) => {
+    btn.classList.toggle('active', Number(btn.dataset.index) === index);
+  });
+  submitQuiz.dataset.answer = mission.answer;
+}
+
+function gradeQuiz() {
+  const choice = quizOptions.querySelector('input[name="quiz"]:checked');
+  if (!choice) {
+    quizResult.textContent = 'Pick an option to grade.';
+    return;
+  }
+  const answer = Number(submitQuiz.dataset.answer);
+  const selected = Number(choice.value);
+  quizResult.textContent = selected === answer ? 'Correct. Tie it back to the live tiles above.' : 'Try again.';
+}
+
+animateSupply();
+attachCopyHandlers();
+wireTooltipHover();
+renderMissions();
+connectWebSocket();
+fetchReferenceMetrics();
+setInterval(fetchReferenceMetrics, 60_000);
+
+proToggle.addEventListener('click', toggleProMode);
+saveAlertBtn.addEventListener('click', saveAlert);
+submitQuiz.addEventListener('click', gradeQuiz);
